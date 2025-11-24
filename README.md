@@ -1,6 +1,6 @@
 # Ignitr Backend
 
-Ignitr is a personal idea tool built to help you capture, structure, and evolve “sparks”, small ideas that can grow into bigger projects.
+Ignitr is a personal idea tool built to help you capture, structure, and evolve “Sparks”, small ideas that can grow into bigger projects.
 
 Right now the backend focuses on the **Spark** domain only, implemented end-to-end and thoroughly tested.
 

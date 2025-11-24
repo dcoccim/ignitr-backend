@@ -1,0 +1,80 @@
+.
+├── .gitignore
+├── .mvn
+│   └── wrapper
+│       ├── MavenWrapperDownloader.java
+│       ├── maven-wrapper.jar
+│       └── maven-wrapper.properties
+├── docs
+│   ├── ai
+│   │   └── copilot-instructions.md
+│   ├── architecture
+│   │   └── project-architecture.md
+│   └── features
+│       └── spark-package-overview.md
+├── mvnw
+├── mvnw.cmd
+├── pom.xml
+├── project-tree.txt
+└── src
+    ├── main
+    │   ├── java
+    │   │   └── dev
+    │   │       └── ignitr
+    │   │           └── ignitrbackend
+    │   │               ├── IgnitrBackendApplication.java
+    │   │               ├── common
+    │   │               │   └── error
+    │   │               │       ├── ApiError.java
+    │   │               │       ├── ApiErrorCode.java
+    │   │               │       └── GlobalExceptionHandler.java
+    │   │               ├── config
+    │   │               │   └── CorsConfig.java
+    │   │               ├── health
+    │   │               │   ├── controller
+    │   │               │   │   └── HealthController.java
+    │   │               │   └── service
+    │   │               │       ├── HealthService.java
+    │   │               │       └── HealthServiceImpl.java
+    │   │               └── spark
+    │   │                   ├── controller
+    │   │                   │   └── SparkController.java
+    │   │                   ├── dto
+    │   │                   │   ├── CreateSparkRequestDTO.java
+    │   │                   │   ├── SparkDTO.java
+    │   │                   │   ├── SparkTreeDTO.java
+    │   │                   │   └── UpdateSparkRequestDTO.java
+    │   │                   ├── exception
+    │   │                   │   ├── SparkAlreadyExistsException.java
+    │   │                   │   └── SparkNotFoundException.java
+    │   │                   ├── mapper
+    │   │                   │   └── SparkMapper.java
+    │   │                   ├── model
+    │   │                   │   ├── Spark.java
+    │   │                   │   └── SparkDeleteMode.java
+    │   │                   ├── repository
+    │   │                   │   └── SparkRepository.java
+    │   │                   └── service
+    │   │                       ├── SparkService.java
+    │   │                       └── SparkServiceImpl.java
+    │   └── resources
+    │       ├── application.properties
+    │       ├── application-dev.properties
+    │       └── static
+    │           └── openapi
+    │               └── ignitr.yaml
+    └── test
+        └── java
+            └── dev
+                └── ignitr
+                    └── ignitrbackend
+                        ├── health
+                        │   └── controller
+                        │       └── HealthControllerTest.java
+                        └── spark
+                            ├── controller
+                            │   └── SparkControllerTest.java
+                            └── service
+                                └── SparkServiceImplTest.java
+
+40 directories, 38 files

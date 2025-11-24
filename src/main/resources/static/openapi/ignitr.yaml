@@ -1,0 +1,448 @@
+openapi: 3.0.3
+info:
+  title: Ignitr API
+  version: 1.0.0
+
+tags:
+  - name: Health
+    description: System health checks
+  - name: Sparks
+    description: Operations for managing Sparks
+
+paths:
+  /api/health:
+    get:
+      tags:
+        - Health
+      summary: Health check
+      description: Returns OK if the service is running.
+      responses:
+        "200":
+          description: Service is healthy.
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: OK
+
+  /api/sparks:
+
+    get:
+      tags:
+        - Sparks
+      summary: Search and filter Sparks
+      description: |
+        Retrieves Sparks using optional filters. Supports pagination.
+        - If **title** is provided: returns Sparks whose titles contain the value (case-insensitive).
+        - If **parentId** is provided: returns Sparks that are children of that parent.
+        - If **parentId** value is "ROOT": returns only top-level Sparks (no parent).
+        - If both are omitted: returns all Sparks.
+
+      parameters:
+        - name: title
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Case-insensitive partial match on title.
+        - name: parentId
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Return only Sparks that have this parent id. Use special value "ROOT" for top-level Sparks.
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+          description: Page index (0-based).
+        - name: size
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          description: Page size (1–100).
+      responses:
+        "200":
+          description: Paginated list of Sparks.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SparkPage'
+        "400":
+          description: Validation error. Returns VALIDATION_ERROR (for invalid pagination parameters).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+    post:
+      tags:
+        - Sparks
+      summary: Create a top-level Spark
+      description: Creates a new Spark with no parent (top-level).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSparkRequest'
+      responses:
+        "201":
+          description: Spark created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Spark'
+        "400":
+          description: Validation error. Returns VALIDATION_ERROR.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        "409":
+          description: Spark with same title already exists. Returns SPARK_ALREADY_EXISTS.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /api/sparks/{id}:
+    get:
+      tags:
+        - Sparks
+      summary: Get a Spark by id
+      description: Returns a single Spark by its id.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ID of the Spark.
+      responses:
+        "200":
+          description: Spark found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Spark'
+        "404":
+          description: Spark not found. Returns SPARK_NOT_FOUND.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+    put:
+      tags:
+        - Sparks
+      summary: Update an existing Spark
+      description: Updates the title and description of an existing Spark.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ID of the Spark to update.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateSparkRequest'
+      responses:
+        '200':
+          description: Spark updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Spark'
+        '400':
+          description: Invalid input. Returns VALIDATION_ERROR.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Spark not found. Returns SPARK_NOT_FOUND.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '409':
+          description: Spark title must be unique. Returns SPARK_ALREADY_EXISTS.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+    delete:
+      tags:
+        - Sparks
+      summary: Delete a Spark
+      description: Deletes the Spark with the given id according to the selected delete mode.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ID of the Spark to delete.
+        - name: mode
+          in: query
+          required: false
+          description: Delete mode. Defaults to CASCADE if not specified.
+          schema:
+            type: string
+            enum:
+              - CASCADE
+              - PROMOTE
+            default: CASCADE
+      responses:
+        "204":
+          description: Spark deleted successfully. No content is returned.
+        "400":
+          description: Validation error. Returns VALIDATION_ERROR.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        "404":
+          description: Spark not found. Returns SPARK_NOT_FOUND.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /api/sparks/{parentId}/children:
+    get:
+      tags:
+        - Sparks
+      summary: Get direct children of a Spark
+      description: Returns all Sparks whose parent is the given Spark id.
+      parameters:
+        - name: parentId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ID of the parent Spark.
+      responses:
+        "200":
+          description: Children found (may be an empty list if none).
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Spark'
+        "404":
+          description: Parent Spark not found. Returns SPARK_NOT_FOUND.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+    post:
+      tags:
+        - Sparks
+      summary: Create a child Spark
+      description: Creates a Spark as a child of the given Spark.
+      parameters:
+        - name: parentId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ID of the parent Spark.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSparkRequest'
+      responses:
+        "201":
+          description: Child Spark created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Spark'
+        "400":
+          description: Validation error. Returns VALIDATION_ERROR.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        "404":
+          description: Parent Spark not found. Returns SPARK_NOT_FOUND.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        "409":
+          description: Spark with same title already exists. Returns SPARK_ALREADY_EXISTS.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /api/sparks/{id}/tree:
+    get:
+      tags:
+        - Sparks
+      summary: Get spark tree
+      description: Returns the Spark with the given id and all its descendants as a recursive tree structure.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ID of the root Spark.
+      responses:
+        '200':
+          description: Spark tree returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SparkTree'
+        '404':
+          description: Spark not found. Returns SPARK_NOT_FOUND.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+components:
+  schemas:
+    CreateSparkRequest:
+      type: object
+      description: Payload for creating a new Spark.
+      properties:
+        title:
+          type: string
+          maxLength: 100
+          description: Spark title (must be unique).
+        description:
+          type: string
+          maxLength: 1500
+          description: Optional description for the Spark.
+      required:
+        - title
+
+    UpdateSparkRequest:
+      type: object
+      description: Payload for updating an existing Spark.
+      properties:
+        title:
+          type: string
+          maxLength: 100
+        description:
+          type: string
+          maxLength: 1500
+      required:
+        - title
+
+    Spark:
+      type: object
+      description: Representation of a Spark object.
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - title
+        - createdAt
+        - updatedAt
+
+    SparkTree:
+      type: object
+      description: Recursive representation of a Spark and its children.
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        children:
+          type: array
+          items:
+            $ref: '#/components/schemas/SparkTree'
+    SparkPage:
+      type: object
+      description: Paginated result containing Spark objects.
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/Spark'
+        totalElements:
+          type: integer
+          example: 42
+        totalPages:
+          type: integer
+          example: 3
+        size:
+          type: integer
+          example: 20
+        number:
+          type: integer
+          example: 0
+      required:
+        - content
+        - totalElements
+        - totalPages
+        - size
+        - number
+
+    ApiError:
+      type: object
+      description: Standard API error response.
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        status:
+          type: integer
+          example: 400
+        error:
+          type: string
+          example: Bad Request
+        code:
+          type: string
+          example: VALIDATION_ERROR
+        message:
+          type: string
+          example: "title must not be blank"
+        path:
+          type: string
+          example: /api/sparks
+      required:
+        - timestamp
+        - status
+        - error
+        - code
+        - message
+        - path

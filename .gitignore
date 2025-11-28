@@ -56,5 +56,8 @@ Thumbs.db
 .env*
 application-prod.properties
 
+## Mongo local data ###
+mongo-data/
+
 ### Other ###
 /out/

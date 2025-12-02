@@ -1,9 +1,6 @@
 package dev.ignitr.ignitrbackend.spark.service;
 
-import dev.ignitr.ignitrbackend.spark.dto.CreateSparkRequestDTO;
-import dev.ignitr.ignitrbackend.spark.dto.SparkDTO;
-import dev.ignitr.ignitrbackend.spark.dto.SparkTreeDTO;
-import dev.ignitr.ignitrbackend.spark.dto.UpdateSparkRequestDTO;
+import dev.ignitr.ignitrbackend.spark.dto.*;
 import dev.ignitr.ignitrbackend.spark.exception.SparkAlreadyExistsException;
 import dev.ignitr.ignitrbackend.spark.exception.SparkNotFoundException;
 import dev.ignitr.ignitrbackend.spark.mapper.SparkMapper;
@@ -36,15 +33,19 @@ public class SparkServiceImpl implements SparkService {
         this.sparkRepository = sparkRepository;
     }
 
+    private void checkExistingTitle(String operation, String title) {
+        if (sparkRepository.existsByTitle(title)) {
+            log.warn("'{}': a Spark with title '{}' already exists", operation, title);
+            throw new SparkAlreadyExistsException(title);
+        }
+    }
+
     @Override
     public SparkDTO createSpark(CreateSparkRequestDTO dto) {
 
         String title = dto.title();
 
-        if (sparkRepository.existsByTitle(title)) {
-            log.warn("Cannot create Spark with duplicate title='{}'", title);
-            throw new SparkAlreadyExistsException(title);
-        }
+        checkExistingTitle("createSpark", title);
 
         Instant now = Instant.now();
         Spark newSpark = SparkMapper.toNewEntity(dto, now);
@@ -67,10 +68,7 @@ public class SparkServiceImpl implements SparkService {
 
         String title = dto.title();
 
-        if(sparkRepository.existsByTitle(title)) {
-            log.warn("Cannot create child Spark with duplicate title='{}'", title);
-            throw new SparkAlreadyExistsException(title);
-        }
+        checkExistingTitle("createChildSpark", title);
 
         log.debug("Creating new Spark with title='{}' and parentId='{}'", title, parent.getId());
         Instant now = Instant.now();
@@ -138,9 +136,8 @@ public class SparkServiceImpl implements SparkService {
 
         String newTitle = dto.title();
 
-        if(!spark.getTitle().equals(newTitle) && sparkRepository.existsByTitle(newTitle)) {
-            log.warn("A Spark with title '{}' already exists", newTitle);
-            throw new SparkAlreadyExistsException(newTitle);
+        if(!spark.getTitle().equals(newTitle)) {
+            checkExistingTitle("updateSpark", newTitle);
         }
 
         log.debug("Updating Spark with id='{}'", spark.getId());
@@ -148,6 +145,29 @@ public class SparkServiceImpl implements SparkService {
         SparkMapper.updateEntity(spark, dto, now);
         Spark savedSpark = sparkRepository.save(spark);
         log.info("Updated Spark with id='{}'", savedSpark.getId());
+
+        return SparkMapper.toSparkDto(savedSpark);
+    }
+
+    @Override
+    public SparkDTO partialUpdateSpark(String id, PatchSparkRequestDTO dto) {
+
+        Spark spark = sparkRepository.findById(id).orElseThrow(() -> {
+            log.warn("Cannot find Spark with id='{}' for partial update", id);
+            return new SparkNotFoundException(id);
+        });
+
+        String newTitle = dto.title();
+
+        if(newTitle != null && !spark.getTitle().equals(newTitle)) {
+            checkExistingTitle("partialUpdateSpark", newTitle);
+        }
+
+        log.debug("Partially updating Spark with id='{}'", spark.getId());
+        Instant now = Instant.now();
+        SparkMapper.partialUpdateEntity(spark, dto, now);
+        Spark savedSpark = sparkRepository.save(spark);
+        log.info("Partial updated Spark with id='{}'", savedSpark.getId());
 
         return SparkMapper.toSparkDto(savedSpark);
     }

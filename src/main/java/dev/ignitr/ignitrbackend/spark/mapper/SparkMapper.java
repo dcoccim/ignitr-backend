@@ -1,9 +1,6 @@
 package dev.ignitr.ignitrbackend.spark.mapper;
 
-import dev.ignitr.ignitrbackend.spark.dto.CreateSparkRequestDTO;
-import dev.ignitr.ignitrbackend.spark.dto.SparkDTO;
-import dev.ignitr.ignitrbackend.spark.dto.SparkTreeDTO;
-import dev.ignitr.ignitrbackend.spark.dto.UpdateSparkRequestDTO;
+import dev.ignitr.ignitrbackend.spark.dto.*;
 import dev.ignitr.ignitrbackend.spark.model.Spark;
 
 import java.time.Instant;
@@ -28,6 +25,18 @@ public class SparkMapper {
         spark.setTitle(dto.title());
         spark.setDescription(dto.description());
         spark.setUpdatedAt(now);
+    }
+
+    public static void partialUpdateEntity(Spark spark, PatchSparkRequestDTO dto, Instant now) {
+        if (dto.title() != null) {
+            spark.setTitle(dto.title());
+        }
+        if (dto.description() != null) {
+            spark.setDescription(dto.description());
+        }
+        if (dto.title() != null || dto.description() != null) {
+            spark.setUpdatedAt(now);
+        }
     }
 
     public static Spark toNewChildEntity(CreateSparkRequestDTO dto, String parentId, Instant now) {

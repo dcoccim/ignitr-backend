@@ -1,9 +1,6 @@
 package dev.ignitr.ignitrbackend.spark.controller;
 
-import dev.ignitr.ignitrbackend.spark.dto.CreateSparkRequestDTO;
-import dev.ignitr.ignitrbackend.spark.dto.SparkDTO;
-import dev.ignitr.ignitrbackend.spark.dto.SparkTreeDTO;
-import dev.ignitr.ignitrbackend.spark.dto.UpdateSparkRequestDTO;
+import dev.ignitr.ignitrbackend.spark.dto.*;
 import dev.ignitr.ignitrbackend.spark.model.SparkDeleteMode;
 import dev.ignitr.ignitrbackend.spark.service.SparkService;
 
@@ -88,6 +85,19 @@ public class SparkController {
             @Valid @RequestBody UpdateSparkRequestDTO request
     ) {
         SparkDTO response = sparkService.updateSpark(id, request);
+        return ResponseEntity.ok(response);
+    }
+
+    @PatchMapping (
+            path = "/{id}",
+            consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE
+    )
+    public ResponseEntity<SparkDTO> patchSpark(
+            @PathVariable String id,
+            @Valid @RequestBody PatchSparkRequestDTO request
+    ) {
+        SparkDTO response = sparkService.partialUpdateSpark(id, request);
         return ResponseEntity.ok(response);
     }
 

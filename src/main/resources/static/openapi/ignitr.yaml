@@ -181,6 +181,49 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApiError'
+    patch:
+      tags:
+        - Sparks
+      summary: Partially update an existing Spark
+      description: Updates one or more fields of an existing Spark. Only provided fields are changed.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ID of the Spark to patch.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchSparkRequest'
+      responses:
+        '200':
+          description: Spark patched successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Spark'
+        '400':
+          description: Invalid input. Returns VALIDATION_ERROR.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Spark not found. Returns SPARK_NOT_FOUND.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '409':
+          description: Spark title must be unique. Returns SPARK_ALREADY_EXISTS.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
     delete:
       tags:
         - Sparks
@@ -347,6 +390,19 @@ components:
           maxLength: 1500
       required:
         - title
+
+    PatchSparkRequest:
+      type: object
+      description: Payload for partially updating a Spark. Only present fields will be updated.
+      properties:
+        title:
+          type: string
+          maxLength: 100
+          description: New title for the Spark (must be unique).
+        description:
+          type: string
+          maxLength: 1500
+          description: New description for the Spark.
 
     Spark:
       type: object

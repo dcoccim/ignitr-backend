@@ -3,6 +3,7 @@ package dev.ignitr.ignitrbackend.spark.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.ignitr.ignitrbackend.common.error.GlobalExceptionHandler;
 import dev.ignitr.ignitrbackend.spark.dto.CreateSparkRequestDTO;
+import dev.ignitr.ignitrbackend.spark.dto.PatchSparkRequestDTO;
 import dev.ignitr.ignitrbackend.spark.dto.SparkDTO;
 import dev.ignitr.ignitrbackend.spark.dto.SparkTreeDTO;
 import dev.ignitr.ignitrbackend.spark.dto.UpdateSparkRequestDTO;
@@ -30,6 +31,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(SparkController.class)
@@ -404,6 +406,75 @@ class SparkControllerTest {
         );
 
         mockMvc.perform(put("/api/sparks/{id}", id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.code", is("VALIDATION_ERROR")))
+                .andExpect(jsonPath("$.status", is(400)));
+    }
+
+    @Test
+    void patchSpark_returns200AndBody_onSuccess() throws Exception {
+
+        String id = "spark-1";
+        String newTitle = "Updated title";
+        String newDescription = "Updated description";
+        Instant now = Instant.now();
+
+        PatchSparkRequestDTO request = new PatchSparkRequestDTO(newTitle, newDescription);
+
+        SparkDTO updated = new SparkDTO(
+                id,
+                newTitle,
+                newDescription,
+                now.minusSeconds(3600),
+                now
+        );
+
+        when(sparkService.partialUpdateSpark(eq(id), any(PatchSparkRequestDTO.class)))
+                .thenReturn(updated);
+
+        mockMvc.perform(patch("/api/sparks/{id}", id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.id", is(id)))
+                .andExpect(jsonPath("$.title", is(newTitle)))
+                .andExpect(jsonPath("$.description", is(newDescription)));
+    }
+
+    @Test
+    void patchSpark_returns409AndApiError_onDuplicateTitle() throws Exception {
+
+        String id = "spark-1";
+        String duplicateTitle = "Duplicate title";
+        PatchSparkRequestDTO request = new PatchSparkRequestDTO(duplicateTitle, "Desc");
+
+        when(sparkService.partialUpdateSpark(eq(id), any(PatchSparkRequestDTO.class)))
+                .thenThrow(new SparkAlreadyExistsException(duplicateTitle));
+
+        mockMvc.perform(patch("/api/sparks/{id}", id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isConflict())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.code", is("SPARK_ALREADY_EXISTS")))
+                .andExpect(jsonPath("$.status", is(409)));
+    }
+
+    @Test
+    void patchSpark_returns400AndValidationError_onInvalidPayload() throws Exception {
+
+        String id = "spark-1";
+
+        PatchSparkRequestDTO request = new PatchSparkRequestDTO(
+                "",
+                "Some description"
+        );
+
+        mockMvc.perform(patch("/api/sparks/{id}", id)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())

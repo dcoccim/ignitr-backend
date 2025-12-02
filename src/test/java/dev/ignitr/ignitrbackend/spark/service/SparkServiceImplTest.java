@@ -1,6 +1,7 @@
 package dev.ignitr.ignitrbackend.spark.service;
 
 import dev.ignitr.ignitrbackend.spark.dto.CreateSparkRequestDTO;
+import dev.ignitr.ignitrbackend.spark.dto.PatchSparkRequestDTO;
 import dev.ignitr.ignitrbackend.spark.dto.SparkDTO;
 import dev.ignitr.ignitrbackend.spark.dto.SparkTreeDTO;
 import dev.ignitr.ignitrbackend.spark.dto.UpdateSparkRequestDTO;
@@ -102,7 +103,7 @@ class SparkServiceImplTest {
 
         assertThatThrownBy(() -> sparkService.createSpark(dto))
                 .isInstanceOf(SparkAlreadyExistsException.class)
-                .hasMessageContaining("Duplicate title");
+                .hasMessageContaining(duplicateTitle);
 
         verify(sparkRepository).existsByTitle(duplicateTitle);
         verify(sparkRepository, never()).save(any(Spark.class));
@@ -415,6 +416,78 @@ class SparkServiceImplTest {
         when(sparkRepository.existsByTitle(duplicateTitle)).thenReturn(true);
 
         assertThatThrownBy(() -> sparkService.updateSpark(id, dto))
+                .isInstanceOf(SparkAlreadyExistsException.class)
+                .hasMessageContaining(duplicateTitle);
+
+        verify(sparkRepository).findById(id);
+        verify(sparkRepository).existsByTitle(duplicateTitle);
+        verify(sparkRepository, never()).save(any(Spark.class));
+    }
+
+    @Test
+    void partialUpdateSpark_updatesProvidedFields_whenSparkExists() {
+
+        String id = "spark-1";
+        Instant createdAt = Instant.now().minusSeconds(7200);
+
+        Spark existing = new Spark(id, "Original title", "Original desc", null, createdAt, createdAt);
+
+        PatchSparkRequestDTO dto = new PatchSparkRequestDTO(null, "New partial desc");
+
+        when(sparkRepository.findById(id)).thenReturn(Optional.of(existing));
+        when(sparkRepository.save(any(Spark.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        SparkDTO result = sparkService.partialUpdateSpark(id, dto);
+
+        ArgumentCaptor<Spark> captor = ArgumentCaptor.forClass(Spark.class);
+        verify(sparkRepository).save(captor.capture());
+        Spark saved = captor.getValue();
+
+        assertThat(saved.getTitle()).isEqualTo("Original title");
+        assertThat(saved.getDescription()).isEqualTo("New partial desc");
+        assertThat(saved.getUpdatedAt()).isNotNull();
+        assertThat(saved.getUpdatedAt()).isAfter(createdAt);
+
+        assertThat(result.id()).isEqualTo(id);
+        assertThat(result.title()).isEqualTo("Original title");
+        assertThat(result.description()).isEqualTo("New partial desc");
+
+        verify(sparkRepository).findById(id);
+        verify(sparkRepository, never()).existsByTitle(anyString());
+    }
+
+    @Test
+    void partialUpdateSpark_throwsWhenSparkNotFound() {
+
+        String missingId = "missing-id";
+        PatchSparkRequestDTO dto = new PatchSparkRequestDTO("Some title", null);
+
+        when(sparkRepository.findById(missingId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> sparkService.partialUpdateSpark(missingId, dto))
+                .isInstanceOf(SparkNotFoundException.class)
+                .hasMessageContaining(missingId);
+
+        verify(sparkRepository).findById(missingId);
+        verify(sparkRepository, never()).existsByTitle(anyString());
+        verify(sparkRepository, never()).save(any(Spark.class));
+    }
+
+    @Test
+    void partialUpdateSpark_throwsWhenNewTitleAlreadyExists() {
+
+        String id = "spark-1";
+        Instant now = Instant.now();
+
+        Spark existing = new Spark(id, "Original", "Desc", null, now, now);
+
+        String duplicateTitle = "Duplicate title";
+        PatchSparkRequestDTO dto = new PatchSparkRequestDTO(duplicateTitle, null);
+
+        when(sparkRepository.findById(id)).thenReturn(Optional.of(existing));
+        when(sparkRepository.existsByTitle(duplicateTitle)).thenReturn(true);
+
+        assertThatThrownBy(() -> sparkService.partialUpdateSpark(id, dto))
                 .isInstanceOf(SparkAlreadyExistsException.class)
                 .hasMessageContaining(duplicateTitle);
 

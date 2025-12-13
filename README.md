@@ -25,6 +25,17 @@ A **Spark** is a basic idea unit. The current feature set includes:
   - by title (case-insensitive)
   - by parentId (including `"ROOT"` for top-level)
   - with pagination and sorting (newest first)
+- Enforced **unique Spark titles** (duplicate requests return 409)
+
+### Reason domain
+
+Reasons enrich Sparks. Current capabilities:
+
+- CRUD endpoints scoped under `/sparks/{sparkId}/reasons`
+- Pagination + optional type filtering (`good` / `bad`)
+- Partial updates for content/type (PATCH)  
+- Content uniqueness enforced **per Spark** (duplicate content returns 409)
+- Responses exposed as DTOs consistent with Spark payloads
 
 ### Health check
 
@@ -74,7 +85,5 @@ Health check:
 
 - Auth & users  
 - Idea grouping  
-- Reason/vote system  
-- AI suggestions  
-- Frontend workspace (React or Angular)
-
+- Vote system  
+- AI suggestions

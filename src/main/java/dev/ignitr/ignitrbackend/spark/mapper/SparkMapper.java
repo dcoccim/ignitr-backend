@@ -1,10 +1,13 @@
 package dev.ignitr.ignitrbackend.spark.mapper;
 
+import dev.ignitr.ignitrbackend.reason.model.ReasonType;
 import dev.ignitr.ignitrbackend.spark.dto.*;
 import dev.ignitr.ignitrbackend.spark.model.Spark;
 
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class SparkMapper {
 
@@ -15,6 +18,7 @@ public class SparkMapper {
                 null,
                 dto.title(),
                 dto.description(),
+                null,
                 null,
                 now,
                 now
@@ -45,6 +49,7 @@ public class SparkMapper {
                 dto.title(),
                 dto.description(),
                 parentId,
+                null,
                 now,
                 now
         );
@@ -55,19 +60,37 @@ public class SparkMapper {
                 entity.getId(),
                 entity.getTitle(),
                 entity.getDescription(),
+                null,
                 entity.getCreatedAt(),
                 entity.getUpdatedAt()
         );
     }
 
-    public static SparkTreeDTO toTreeDto(Spark entity, List<SparkTreeDTO> children) {
-        return new SparkTreeDTO(
-                entity.getId(),
-                entity.getTitle(),
-                entity.getDescription(),
-                entity.getCreatedAt(),
-                entity.getUpdatedAt(),
-                children
-        );
+    public static SparkTreeDTO toSparkTreeDto(List<Spark> sparks, String rootId) {
+        Map<String, SparkTreeDTO> map = new HashMap<>(sparks.size());
+        for (Spark spark : sparks) {
+            int goodReasonsCount = (int) spark.getReasons()
+                    .stream()
+                    .filter(r -> r.getType() == ReasonType.GOOD)
+                    .count();
+            int badReasonsCount = (int) spark.getReasons()
+                    .stream()
+                    .filter(r -> r.getType() == ReasonType.BAD)
+                    .count();
+            SparkTreeDTO dto = SparkTreeDTO.from(spark, goodReasonsCount, badReasonsCount);
+            map.put(spark.getId(), dto);
+        }
+
+        for (Spark spark : sparks) {
+            String parentId = spark.getParentId();
+            if (parentId != null) {
+                SparkTreeDTO parentDto = map.get(parentId);
+                if (parentDto != null) {
+                    parentDto.children().add(map.get(spark.getId()));
+                }
+            }
+        }
+
+        return map.get(rootId);
     }
 }

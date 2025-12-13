@@ -4,11 +4,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.ignitr.ignitrbackend.common.error.GlobalExceptionHandler;
 import dev.ignitr.ignitrbackend.spark.dto.CreateSparkRequestDTO;
 import dev.ignitr.ignitrbackend.spark.dto.PatchSparkRequestDTO;
-import dev.ignitr.ignitrbackend.spark.dto.SparkDTO;
-import dev.ignitr.ignitrbackend.spark.dto.SparkTreeDTO;
 import dev.ignitr.ignitrbackend.spark.dto.UpdateSparkRequestDTO;
 import dev.ignitr.ignitrbackend.spark.exception.SparkAlreadyExistsException;
 import dev.ignitr.ignitrbackend.spark.exception.SparkNotFoundException;
+import dev.ignitr.ignitrbackend.spark.model.Spark;
 import dev.ignitr.ignitrbackend.spark.model.SparkDeleteMode;
 import dev.ignitr.ignitrbackend.spark.service.SparkService;
 import org.junit.jupiter.api.Test;
@@ -58,12 +57,12 @@ class SparkControllerTest {
         String mockId = "spark-id-123";
         Instant now = Instant.now();
 
-        SparkDTO spark = new SparkDTO(mockId, title, description, now, now);
+        Spark spark = new Spark(mockId, title, description, null, List.of(), now, now);
 
         when(sparkService.createSpark(any(CreateSparkRequestDTO.class)))
                 .thenReturn(spark);
 
-        mockMvc.perform(post("/api/sparks")
+        mockMvc.perform(post("/sparks")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
@@ -84,7 +83,7 @@ class SparkControllerTest {
         when(sparkService.createSpark(any(CreateSparkRequestDTO.class)))
                 .thenThrow(new SparkAlreadyExistsException(duplicateTitle));
 
-        mockMvc.perform(post("/api/sparks")
+        mockMvc.perform(post("/sparks")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isConflict())
@@ -104,7 +103,7 @@ class SparkControllerTest {
                 description
         );
 
-        mockMvc.perform(post("/api/sparks")
+        mockMvc.perform(post("/sparks")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
@@ -125,12 +124,12 @@ class SparkControllerTest {
         String mockChildId = "child-id-456";
         Instant now = Instant.now();
 
-        SparkDTO child = new SparkDTO (mockChildId, title, description, now, now);
+        Spark child = new Spark (mockChildId, title, description, parentId, List.of(), now, now);
 
         when(sparkService.createChildSpark(eq(parentId), any(CreateSparkRequestDTO.class)))
                 .thenReturn(child);
 
-        mockMvc.perform(post("/api/sparks/{parentId}/children", parentId)
+        mockMvc.perform(post("/sparks/{parentId}/children", parentId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
@@ -152,7 +151,7 @@ class SparkControllerTest {
         when(sparkService.createChildSpark(eq(parentId), any(CreateSparkRequestDTO.class)))
                 .thenThrow(new SparkNotFoundException(parentId));
 
-        mockMvc.perform(post("/api/sparks/{parentId}/children", parentId)
+        mockMvc.perform(post("/sparks/{parentId}/children", parentId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isNotFound())
@@ -169,11 +168,11 @@ class SparkControllerTest {
         String description = "Description";
         Instant now = Instant.now();
 
-        SparkDTO spark = new SparkDTO (id, title, description, now, now);
+        Spark spark = new Spark (id, title, description, null, List.of(), now, now);
 
         when(sparkService.getSparkById(id)).thenReturn(spark);
 
-        mockMvc.perform(get("/api/sparks/{id}", id)
+        mockMvc.perform(get("/sparks/{id}", id)
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -190,7 +189,7 @@ class SparkControllerTest {
         when(sparkService.getSparkById(missingId))
                 .thenThrow(new SparkNotFoundException(missingId));
 
-        mockMvc.perform(get("/api/sparks/{id}", missingId)
+        mockMvc.perform(get("/sparks/{id}", missingId)
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -209,12 +208,12 @@ class SparkControllerTest {
         Instant now = Instant.now();
 
 
-        SparkDTO child1 = new SparkDTO(child1Id, child1Title, "Desc 1", now, now);
-        SparkDTO child2 = new SparkDTO(child2Id, child2Title, "Desc 2", now, now);
+        Spark child1 = new Spark(child1Id, child1Title, "Desc 1", parentId, List.of(), now, now);
+        Spark child2 = new Spark(child2Id, child2Title, "Desc 2", parentId, List.of(), now, now);
 
         when(sparkService.getChildren(parentId)).thenReturn(List.of(child1, child2));
 
-        mockMvc.perform(get("/api/sparks/{id}/children", parentId)
+        mockMvc.perform(get("/sparks/{id}/children", parentId)
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -232,7 +231,7 @@ class SparkControllerTest {
         when(sparkService.getChildren(missingParentId))
                 .thenThrow(new SparkNotFoundException(missingParentId));
 
-        mockMvc.perform(get("/api/sparks/{id}/children", missingParentId)
+        mockMvc.perform(get("/sparks/{id}/children", missingParentId)
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -253,45 +252,49 @@ class SparkControllerTest {
         String childOfChild1Title = "Child 1 of child 1";
         Instant now = Instant.now();
 
-        SparkTreeDTO childOfChild1 = new SparkTreeDTO(
+        Spark childOfChild1 = new Spark(
                 childOfChild1Id,
                 childOfChild1Title,
                 "Desc Child of Child 1",
+                child1Id,
+                List.of(),
                 now,
-                now,
-                List.of()
+                now
         );
 
-        SparkTreeDTO child1 = new SparkTreeDTO(
+        Spark child1 = new Spark(
                 child1Id,
                 child1Title,
                 "Desc Child 1",
+                rootId,
+                List.of(),
                 now,
-                now,
-                List.of(childOfChild1)
+                now
         );
 
-        SparkTreeDTO child2 = new SparkTreeDTO(
+        Spark child2 = new Spark(
                 child2Id,
                 child2Title,
                 "Desc Child 2",
+                rootId,
+                List.of(),
                 now,
-                now,
-                List.of()
+                now
         );
 
-        SparkTreeDTO tree = new SparkTreeDTO(
+        Spark root = new Spark(
                 rootId,
                 rootTitle,
                 "Root desc",
+                null,
+                List.of(),
                 now,
-                now,
-                List.of(child1, child2)
+                now
         );
 
-        when(sparkService.getSparkTree(rootId)).thenReturn(tree);
+        when(sparkService.getSparkTreeList(rootId)).thenReturn(List.of(root, child1, child2, childOfChild1));
 
-        mockMvc.perform(get("/api/sparks/{id}/tree", rootId)
+        mockMvc.perform(get("/sparks/{id}/tree", rootId)
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -316,10 +319,10 @@ class SparkControllerTest {
     void getSparkTree_returns404AndApiError_whenRootNotFound() throws Exception {
 
         String missingId = "missing-id";
-        when(sparkService.getSparkTree(missingId))
+        when(sparkService.getSparkTreeList(missingId))
                 .thenThrow(new SparkNotFoundException(missingId));
 
-        mockMvc.perform(get("/api/sparks/{id}/tree", missingId)
+        mockMvc.perform(get("/sparks/{id}/tree", missingId)
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -337,10 +340,12 @@ class SparkControllerTest {
 
         UpdateSparkRequestDTO request = new UpdateSparkRequestDTO(newTitle, newDescription);
 
-        SparkDTO updated = new SparkDTO(
+        Spark updated = new Spark(
                 id,
                 newTitle,
                 newDescription,
+                null,
+                List.of(),
                 now.minusSeconds(3600),
                 now
         );
@@ -348,7 +353,7 @@ class SparkControllerTest {
         when(sparkService.updateSpark(eq(id), any(UpdateSparkRequestDTO.class)))
                 .thenReturn(updated);
 
-        mockMvc.perform(put("/api/sparks/{id}", id)
+        mockMvc.perform(put("/sparks/{id}", id)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -367,7 +372,7 @@ class SparkControllerTest {
         when(sparkService.updateSpark(eq(missingId), any(UpdateSparkRequestDTO.class)))
                 .thenThrow(new SparkNotFoundException(missingId));
 
-        mockMvc.perform(put("/api/sparks/{id}", missingId)
+        mockMvc.perform(put("/sparks/{id}", missingId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isNotFound())
@@ -386,7 +391,7 @@ class SparkControllerTest {
         when(sparkService.updateSpark(eq(id), any(UpdateSparkRequestDTO.class)))
                 .thenThrow(new SparkAlreadyExistsException(duplicateTitle));
 
-        mockMvc.perform(put("/api/sparks/{id}", id)
+        mockMvc.perform(put("/sparks/{id}", id)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isConflict())
@@ -405,7 +410,7 @@ class SparkControllerTest {
                 "Some description"
         );
 
-        mockMvc.perform(put("/api/sparks/{id}", id)
+        mockMvc.perform(put("/sparks/{id}", id)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
@@ -424,10 +429,12 @@ class SparkControllerTest {
 
         PatchSparkRequestDTO request = new PatchSparkRequestDTO(newTitle, newDescription);
 
-        SparkDTO updated = new SparkDTO(
+        Spark updated = new Spark(
                 id,
                 newTitle,
                 newDescription,
+                null,
+                List.of(),
                 now.minusSeconds(3600),
                 now
         );
@@ -435,7 +442,7 @@ class SparkControllerTest {
         when(sparkService.partialUpdateSpark(eq(id), any(PatchSparkRequestDTO.class)))
                 .thenReturn(updated);
 
-        mockMvc.perform(patch("/api/sparks/{id}", id)
+        mockMvc.perform(patch("/sparks/{id}", id)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -455,7 +462,7 @@ class SparkControllerTest {
         when(sparkService.partialUpdateSpark(eq(id), any(PatchSparkRequestDTO.class)))
                 .thenThrow(new SparkAlreadyExistsException(duplicateTitle));
 
-        mockMvc.perform(patch("/api/sparks/{id}", id)
+        mockMvc.perform(patch("/sparks/{id}", id)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isConflict())
@@ -474,7 +481,7 @@ class SparkControllerTest {
                 "Some description"
         );
 
-        mockMvc.perform(patch("/api/sparks/{id}", id)
+        mockMvc.perform(patch("/sparks/{id}", id)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
@@ -491,7 +498,7 @@ class SparkControllerTest {
         // Service does not throw → success
         doNothing().when(sparkService).deleteSpark(id, SparkDeleteMode.CASCADE);
 
-        mockMvc.perform(delete("/api/sparks/{id}", id)
+        mockMvc.perform(delete("/sparks/{id}", id)
                         .param("mode", "CASCADE"))
                 .andExpect(status().isNoContent());
 
@@ -505,7 +512,7 @@ class SparkControllerTest {
 
         doNothing().when(sparkService).deleteSpark(id, SparkDeleteMode.PROMOTE);
 
-        mockMvc.perform(delete("/api/sparks/{id}", id)
+        mockMvc.perform(delete("/sparks/{id}", id)
                         .param("mode", "PROMOTE"))
                 .andExpect(status().isNoContent());
 
@@ -522,7 +529,7 @@ class SparkControllerTest {
                 .when(sparkService)
                 .deleteSpark(missingId, SparkDeleteMode.CASCADE);
 
-        mockMvc.perform(delete("/api/sparks/{id}", missingId)
+        mockMvc.perform(delete("/sparks/{id}", missingId)
                         .param("mode", "CASCADE")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound())
@@ -538,27 +545,29 @@ class SparkControllerTest {
 
         String id1 = "spark-1";
         String id2 = "spark-2";
+        String title1 = "First spark";
+        String title2 = "Second spark";
         Instant now = Instant.now();
 
-        SparkDTO dto1 = new SparkDTO(id1, "First spark", "Desc 1", now, now);
-        SparkDTO dto2 = new SparkDTO(id2, "Second spark", "Desc 2", now, now);
+        Spark spark1 = new Spark(id1, title1, "Desc 1", null, List.of(), now, now);
+        Spark spark2 = new Spark(id2, title2, "Desc 2", null, List.of(), now, now);
 
-        Page<SparkDTO> page = new PageImpl<>(
-                List.of(dto1, dto2),
+        Page<Spark> page = new PageImpl<>(
+                List.of(spark1, spark2),
                 PageRequest.of(0, 20),
                 2
         );
 
         when(sparkService.searchSparks(null, null, 0, 20)).thenReturn(page);
 
-        mockMvc.perform(get("/api/sparks")
+        mockMvc.perform(get("/sparks")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$[0].id", is(id1)))
-                .andExpect(jsonPath("$[0].title", is("First spark")))
-                .andExpect(jsonPath("$[1].id", is(id2)))
-                .andExpect(jsonPath("$[1].title", is("Second spark")));
+                .andExpect(jsonPath("$.content[0].id", is(id1)))
+                .andExpect(jsonPath("$.content[0].title", is("First spark")))
+                .andExpect(jsonPath("$.content[1].id", is(id2)))
+                .andExpect(jsonPath("$.content[1].title", is("Second spark")));
     }
 
     @Test
@@ -567,7 +576,7 @@ class SparkControllerTest {
         when(sparkService.searchSparks("test", "ROOT", 1, 10))
                 .thenReturn(Page.empty());
 
-        mockMvc.perform(get("/api/sparks")
+        mockMvc.perform(get("/sparks")
                         .param("title", "test")
                         .param("parentId", "ROOT")
                         .param("page", "1")

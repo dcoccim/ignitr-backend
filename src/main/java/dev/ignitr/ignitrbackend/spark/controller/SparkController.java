@@ -1,11 +1,15 @@
 package dev.ignitr.ignitrbackend.spark.controller;
 
+import dev.ignitr.ignitrbackend.common.dto.PagedResponse;
 import dev.ignitr.ignitrbackend.spark.dto.*;
+import dev.ignitr.ignitrbackend.spark.mapper.SparkMapper;
+import dev.ignitr.ignitrbackend.spark.model.Spark;
 import dev.ignitr.ignitrbackend.spark.model.SparkDeleteMode;
 import dev.ignitr.ignitrbackend.spark.service.SparkService;
 
 import jakarta.validation.Valid;
 
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -16,7 +20,7 @@ import java.util.List;
 
 
 @RestController
-@RequestMapping("/api/sparks")
+@RequestMapping("/sparks")
 @Validated
 public class SparkController {
 
@@ -31,7 +35,8 @@ public class SparkController {
             produces = MediaType.APPLICATION_JSON_VALUE
     )
     public ResponseEntity<SparkDTO> create(@Valid @RequestBody CreateSparkRequestDTO request) {
-        SparkDTO response = sparkService.createSpark(request);
+        Spark newSpark = sparkService.createSpark(request);
+        SparkDTO response = SparkMapper.toSparkDto(newSpark);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -44,7 +49,8 @@ public class SparkController {
             @PathVariable String parentId,
             @Valid @RequestBody CreateSparkRequestDTO request
     ) {
-        SparkDTO response = sparkService.createChildSpark(parentId, request);
+        Spark newChildSpark = sparkService.createChildSpark(parentId, request);
+        SparkDTO response = SparkMapper.toSparkDto(newChildSpark);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -53,7 +59,8 @@ public class SparkController {
             produces = MediaType.APPLICATION_JSON_VALUE
     )
     public ResponseEntity<SparkDTO> getById(@PathVariable String id) {
-        SparkDTO response = sparkService.getSparkById(id);
+        Spark spark = sparkService.getSparkById(id);
+        SparkDTO response = SparkMapper.toSparkDto(spark);
         return ResponseEntity.ok(response);
     }
 
@@ -62,7 +69,10 @@ public class SparkController {
             produces = MediaType.APPLICATION_JSON_VALUE
     )
     public ResponseEntity<List<SparkDTO>> getChildren(@PathVariable String id) {
-        List<SparkDTO> response = sparkService.getChildren(id);
+        List<Spark> children = sparkService.getChildren(id);
+        List<SparkDTO> response = children.stream()
+                .map(SparkMapper::toSparkDto)
+                .toList();
         return ResponseEntity.ok(response);
     }
 
@@ -71,7 +81,8 @@ public class SparkController {
             produces = MediaType.APPLICATION_JSON_VALUE
     )
     public ResponseEntity<SparkTreeDTO> getSparkTree(@PathVariable String id) {
-        SparkTreeDTO response = sparkService.getSparkTree(id);
+        List<Spark> sparkTreeList = sparkService.getSparkTreeList(id);
+        SparkTreeDTO response = SparkMapper.toSparkTreeDto(sparkTreeList, id);
         return ResponseEntity.ok(response);
     }
 
@@ -84,7 +95,8 @@ public class SparkController {
             @PathVariable String id,
             @Valid @RequestBody UpdateSparkRequestDTO request
     ) {
-        SparkDTO response = sparkService.updateSpark(id, request);
+        Spark updatedSpark = sparkService.updateSpark(id, request);
+        SparkDTO response = SparkMapper.toSparkDto(updatedSpark);
         return ResponseEntity.ok(response);
     }
 
@@ -97,7 +109,8 @@ public class SparkController {
             @PathVariable String id,
             @Valid @RequestBody PatchSparkRequestDTO request
     ) {
-        SparkDTO response = sparkService.partialUpdateSpark(id, request);
+        Spark updatedSpark = sparkService.partialUpdateSpark(id, request);
+        SparkDTO response = SparkMapper.toSparkDto(updatedSpark);
         return ResponseEntity.ok(response);
     }
 
@@ -111,13 +124,21 @@ public class SparkController {
     }
 
     @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<List<SparkDTO>> searchSparks(
+    public ResponseEntity<PagedResponse<SparkDTO>> searchSparks(
             @RequestParam(name = "title", required = false) String title,
             @RequestParam(name = "parentId", required = false) String parentId,
             @RequestParam(name = "page", defaultValue = "0") int page,
             @RequestParam(name = "size", defaultValue = "20") int size
     ) {
-        List<SparkDTO> response = sparkService.searchSparks(title, parentId, page, size).getContent();
-        return ResponseEntity.ok(response);
+        Page<Spark> sparksPage = sparkService.searchSparks(title, parentId, page, size);
+        Page<SparkDTO> response = sparksPage.map(SparkMapper::toSparkDto);
+        PagedResponse<SparkDTO> pagedResponse = new PagedResponse<>(
+                response.getContent(),
+                response.getNumber(),
+                response.getSize(),
+                response.getTotalElements(),
+                response.getTotalPages()
+        );
+        return ResponseEntity.ok(pagedResponse);
     }
 }

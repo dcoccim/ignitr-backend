@@ -1,30 +1,32 @@
 package dev.ignitr.ignitrbackend.spark.service;
 
 import dev.ignitr.ignitrbackend.spark.dto.*;
+import dev.ignitr.ignitrbackend.spark.exception.SparkNotFoundException;
+import dev.ignitr.ignitrbackend.spark.model.Spark;
 import dev.ignitr.ignitrbackend.spark.model.SparkDeleteMode;
 import org.springframework.data.domain.Page;
-import org.springframework.stereotype.Service;
 
 import java.util.List;
 
-@Service
 public interface SparkService {
 
-    SparkDTO createSpark(CreateSparkRequestDTO dto);
+    Spark saveSpark(Spark spark);
 
-    SparkDTO createChildSpark(String parentId, CreateSparkRequestDTO dto);
+    Spark createSpark(CreateSparkRequestDTO dto);
 
-    SparkDTO getSparkById(String id);
+    Spark createChildSpark(String parentId, CreateSparkRequestDTO dto);
 
-    List<SparkDTO> getChildren(String parentId);
+    Spark getSparkById(String id) throws SparkNotFoundException;
 
-    SparkTreeDTO getSparkTree(String rootId);
+    List<Spark> getChildren(String parentId);
 
-    SparkDTO updateSpark(String id, UpdateSparkRequestDTO dto);
+    List<Spark> getSparkTreeList(String rootId);
 
-    SparkDTO partialUpdateSpark(String id, PatchSparkRequestDTO dto);
+    Spark updateSpark(String id, UpdateSparkRequestDTO dto);
+
+    Spark partialUpdateSpark(String id, PatchSparkRequestDTO dto);
 
     void deleteSpark(String id, SparkDeleteMode mode);
 
-    Page<SparkDTO> searchSparks(String title, String parentId, int page, int size);
+    Page<Spark> searchSparks(String title, String parentId, int page, int size);
 }

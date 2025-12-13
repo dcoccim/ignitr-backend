@@ -8,6 +8,8 @@ tags:
     description: System health checks
   - name: Sparks
     description: Operations for managing Sparks
+  - name: Reasons
+    description: Operations for managing Reasons attached to Sparks
 
 paths:
   /api/health:
@@ -361,6 +363,223 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiError'
 
+  /api/sparks/{sparkId}/reasons:
+    get:
+      tags:
+        - Reasons
+      summary: List Reasons for a Spark
+      description: Returns a paginated list of Reasons attached to the specified Spark. Optionally filters by reason type.
+      parameters:
+        - name: sparkId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ID of the Spark whose Reasons should be returned.
+        - name: type
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/ReasonType'
+          description: Filter results by Reason type (case-insensitive).
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+          description: Page index (0-based).
+        - name: size
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+          description: Page size (1–100).
+      responses:
+        '200':
+          description: Reasons returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReasonPage'
+        '400':
+          description: Validation error. Returns VALIDATION_ERROR.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Spark not found. Returns SPARK_NOT_FOUND.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+    post:
+      tags:
+        - Reasons
+      summary: Create a Reason for a Spark
+      description: Creates a new Reason attached to the specified Spark.
+      parameters:
+        - name: sparkId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ID of the Spark receiving the new reason.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateReasonRequest'
+      responses:
+        '201':
+          description: Reason created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reason'
+        '400':
+          description: Validation error. Returns VALIDATION_ERROR.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Spark not found. Returns SPARK_NOT_FOUND.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+    delete:
+      tags:
+        - Reasons
+      summary: Delete all Reasons for a Spark
+      description: Removes every Reason attached to the specified Spark.
+      parameters:
+        - name: sparkId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ID of the Spark whose Reasons will be removed.
+      responses:
+        '204':
+          description: Reasons deleted successfully. No content is returned.
+        '404':
+          description: Spark not found. Returns SPARK_NOT_FOUND.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /api/sparks/{sparkId}/reasons/{reasonId}:
+    get:
+      tags:
+        - Reasons
+      summary: Get a Reason by id
+      description: Returns a single Reason belonging to the specified Spark.
+      parameters:
+        - name: sparkId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ID of the Spark that owns the reason.
+        - name: reasonId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ID of the Reason to retrieve.
+      responses:
+        '200':
+          description: Reason found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reason'
+        '404':
+          description: Reason or Spark not found. Returns REASON_NOT_FOUND or SPARK_NOT_FOUND.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+    put:
+      tags:
+        - Reasons
+      summary: Update a Reason
+      description: Replaces the content and type of an existing Reason.
+      parameters:
+        - name: sparkId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ID of the Spark that owns the Reason.
+        - name: reasonId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ID of the Reason to update.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateReasonRequest'
+      responses:
+        '200':
+          description: Reason updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reason'
+        '400':
+          description: Validation error. Returns VALIDATION_ERROR.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Reason or Spark not found. Returns REASON_NOT_FOUND or SPARK_NOT_FOUND.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+    delete:
+      tags:
+        - Reasons
+      summary: Delete a Reason
+      description: Deletes a single reason belonging to the specified Spark.
+      parameters:
+        - name: sparkId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ID of the Spark that owns the Reason.
+        - name: reasonId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ID of the Reason to delete.
+      responses:
+        '204':
+          description: Reason deleted successfully. No content is returned.
+        '404':
+          description: Reason or Spark not found. Returns REASON_NOT_FOUND or SPARK_NOT_FOUND.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
 components:
   schemas:
     CreateSparkRequest:
@@ -448,30 +667,122 @@ components:
             $ref: '#/components/schemas/SparkTree'
     SparkPage:
       type: object
-      description: Paginated result containing Spark objects.
+      description: Paginated result containing Spark objects. `page` is zero-based.
       properties:
         content:
           type: array
           items:
             $ref: '#/components/schemas/Spark'
+        page:
+          type: integer
+          description: Page index (0-based).
+          example: 0
+        size:
+          type: integer
+          description: Page size.
+          example: 20
         totalElements:
           type: integer
+          description: Total number of matching elements.
           example: 42
         totalPages:
           type: integer
+          description: Total number of pages available.
           example: 3
-        size:
-          type: integer
-          example: 20
-        number:
-          type: integer
-          example: 0
       required:
         - content
         - totalElements
         - totalPages
         - size
-        - number
+        - page
+
+    Reason:
+      type: object
+      description: Representation of a Reason attached to a Spark.
+      properties:
+        id:
+          type: string
+        content:
+          type: string
+        type:
+          $ref: '#/components/schemas/ReasonType'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - content
+        - type
+        - createdAt
+        - updatedAt
+
+    CreateReasonRequest:
+      type: object
+      description: Payload for creating a new Reason.
+      properties:
+        content:
+          type: string
+          maxLength: 1500
+        type:
+          $ref: '#/components/schemas/ReasonType'
+      required:
+        - content
+        - type
+
+    UpdateReasonRequest:
+      type: object
+      description: Payload for updating an existing Reason.
+      properties:
+        content:
+          type: string
+          maxLength: 1500
+        type:
+          $ref: '#/components/schemas/ReasonType'
+      required:
+        - content
+        - type
+
+    ReasonPage:
+      type: object
+      description: Paginated result containing Reason objects. `page` is zero-based.
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/Reason'
+        page:
+          type: integer
+          description: Page index (0-based).
+          example: 0
+        size:
+          type: integer
+          description: Page size.
+          example: 10
+        totalElements:
+          type: integer
+          description: Total number of matching elements.
+          example: 2
+        totalPages:
+          type: integer
+          description: Total number of pages available.
+          example: 1
+      required:
+        - content
+        - totalElements
+        - totalPages
+        - size
+        - page
+
+    ReasonType:
+      type: string
+      description: Reason classification.
+      enum:
+        - good
+        - bad
+      example: good
 
     ApiError:
       type: object

@@ -2,8 +2,6 @@ package dev.ignitr.ignitrbackend.spark.service;
 
 import dev.ignitr.ignitrbackend.spark.dto.CreateSparkRequestDTO;
 import dev.ignitr.ignitrbackend.spark.dto.PatchSparkRequestDTO;
-import dev.ignitr.ignitrbackend.spark.dto.SparkDTO;
-import dev.ignitr.ignitrbackend.spark.dto.SparkTreeDTO;
 import dev.ignitr.ignitrbackend.spark.dto.UpdateSparkRequestDTO;
 import dev.ignitr.ignitrbackend.spark.exception.SparkAlreadyExistsException;
 import dev.ignitr.ignitrbackend.spark.exception.SparkNotFoundException;
@@ -44,7 +42,7 @@ class SparkServiceImplTest {
     }
 
     @Test
-    void createSpark_savesAndReturnsDto_whenTitleIsUnique() {
+    void createSpark_savesAndReturnsSpark_whenTitleIsUnique() {
 
         String mockId = "mock-id-123";
         String uniqueTitle = "My unique spark";
@@ -60,12 +58,11 @@ class SparkServiceImplTest {
         when(sparkRepository.save(any(Spark.class)))
                 .thenAnswer(invocation -> {
                     Spark arg = invocation.getArgument(0);
-                    //assigning mock id
                     arg.setId(mockId);
                     return arg;
                 });
 
-        SparkDTO result = sparkService.createSpark(dto);
+        Spark result = sparkService.createSpark(dto);
 
         verify(sparkRepository).existsByTitle(uniqueTitle);
 
@@ -80,11 +77,11 @@ class SparkServiceImplTest {
         assertThat(savedSpark.getCreatedAt()).isNotNull();
         assertThat(savedSpark.getUpdatedAt()).isNotNull();
 
-        assertThat(result.id()).isEqualTo(savedSpark.getId());
-        assertThat(result.title()).isEqualTo(savedSpark.getTitle());
-        assertThat(result.description()).isEqualTo(savedSpark.getDescription());
-        assertThat(result.createdAt()).isEqualTo(savedSpark.getCreatedAt());
-        assertThat(result.updatedAt()).isEqualTo(savedSpark.getUpdatedAt());
+        assertThat(result.getId()).isEqualTo(savedSpark.getId());
+        assertThat(result.getTitle()).isEqualTo(savedSpark.getTitle());
+        assertThat(result.getDescription()).isEqualTo(savedSpark.getDescription());
+        assertThat(result.getCreatedAt()).isEqualTo(savedSpark.getCreatedAt());
+        assertThat(result.getUpdatedAt()).isEqualTo(savedSpark.getUpdatedAt());
 
     }
 
@@ -119,7 +116,7 @@ class SparkServiceImplTest {
 
         Instant now = Instant.now();
 
-        Spark parent = new Spark(parentId, "Parent", "Desc", null, now, now);
+        Spark parent = new Spark(parentId, "Parent", "Desc", null, List.of(), now, now);
 
         CreateSparkRequestDTO dto = new CreateSparkRequestDTO(title, description);
 
@@ -133,7 +130,7 @@ class SparkServiceImplTest {
                     return saved;
                 });
 
-        SparkDTO result = sparkService.createChildSpark(parentId, dto);
+        Spark result = sparkService.createChildSpark(parentId, dto);
 
         verify(sparkRepository).findById(parentId);
         verify(sparkRepository).existsByTitle(title);
@@ -147,11 +144,11 @@ class SparkServiceImplTest {
         assertThat(savedChildSpark.getTitle()).isEqualTo(title);
         assertThat(savedChildSpark.getDescription()).isEqualTo(description);
 
-        assertThat(result.id()).isEqualTo(savedChildSpark.getId());
-        assertThat(result.title()).isEqualTo(savedChildSpark.getTitle());
-        assertThat(result.description()).isEqualTo(savedChildSpark.getDescription());
-        assertThat(result.createdAt()).isEqualTo(savedChildSpark.getCreatedAt());
-        assertThat(result.updatedAt()).isEqualTo(savedChildSpark.getUpdatedAt());
+        assertThat(result.getId()).isEqualTo(savedChildSpark.getId());
+        assertThat(result.getTitle()).isEqualTo(savedChildSpark.getTitle());
+        assertThat(result.getDescription()).isEqualTo(savedChildSpark.getDescription());
+        assertThat(result.getCreatedAt()).isEqualTo(savedChildSpark.getCreatedAt());
+        assertThat(result.getUpdatedAt()).isEqualTo(savedChildSpark.getUpdatedAt());
     }
 
     @Test
@@ -180,7 +177,7 @@ class SparkServiceImplTest {
 
         Instant now = Instant.now();
 
-        Spark parent = new Spark(parentId, "Parent", "Desc", null, now, now);
+        Spark parent = new Spark(parentId, "Parent", "Desc", null, List.of(),now, now);
 
         CreateSparkRequestDTO dto = new CreateSparkRequestDTO(duplicateTitle, description);
 
@@ -203,17 +200,17 @@ class SparkServiceImplTest {
         String title = "Title";
         String description = "Description";
         Instant now = Instant.now();
-        Spark spark = new Spark(id, title, description, null, now, now);
+        Spark spark = new Spark(id, title, description, null, List.of(), now, now);
 
         when(sparkRepository.findById(id)).thenReturn(Optional.of(spark));
 
-        SparkDTO result = sparkService.getSparkById(id);
+        Spark result = sparkService.getSparkById(id);
 
-        assertThat(result.id()).isEqualTo(id);
-        assertThat(result.title()).isEqualTo(title);
-        assertThat(result.description()).isEqualTo(description);
-        assertThat(result.createdAt()).isEqualTo(now);
-        assertThat(result.updatedAt()).isEqualTo(now);
+        assertThat(result.getId()).isEqualTo(id);
+        assertThat(result.getTitle()).isEqualTo(title);
+        assertThat(result.getDescription()).isEqualTo(description);
+        assertThat(result.getCreatedAt()).isEqualTo(now);
+        assertThat(result.getUpdatedAt()).isEqualTo(now);
 
         verify(sparkRepository).findById(id);
     }
@@ -233,24 +230,24 @@ class SparkServiceImplTest {
     }
 
     @Test
-    void getChildren_returnsDtoList_whenParentExists() {
+    void getChildren_returnsSparkList_whenParentExists() {
 
         String parentId = "parent-123";
         String child1Id = "child-1";
         String child2Id = "child-2";
         Instant now = Instant.now();
 
-        Spark parent = new Spark(parentId, "Parent", "Parent desc", null, now, now);
-        Spark child1 = new Spark(child1Id, "Child 1", "Desc 1", parentId, now, now);
-        Spark child2 = new Spark(child2Id, "Child 2", "Desc 2", parentId, now, now);
+        Spark parent = new Spark(parentId, "Parent", "Parent desc", null, List.of(), now, now);
+        Spark child1 = new Spark(child1Id, "Child 1", "Desc 1", parentId, List.of(), now, now);
+        Spark child2 = new Spark(child2Id, "Child 2", "Desc 2", parentId, List.of(), now, now);
 
         when(sparkRepository.findById(parentId)).thenReturn(Optional.of(parent));
         when(sparkRepository.findByParentId(parentId)).thenReturn(List.of(child1, child2));
 
-        List<SparkDTO> result = sparkService.getChildren(parentId);
+        List<Spark> result = sparkService.getChildren(parentId);
 
         assertThat(result).hasSize(2);
-        assertThat(result).extracting(SparkDTO::id).containsExactly(child1Id, child2Id);
+        assertThat(result).extracting(Spark::getId).containsExactly(child1Id, child2Id);
 
         verify(sparkRepository).findById(parentId);
         verify(sparkRepository).findByParentId(parentId);
@@ -273,7 +270,7 @@ class SparkServiceImplTest {
 
 
     @Test
-    void getSparkTree_returnsTree_whenRootExists() {
+    void getSparkTreeList_returnsTreeList_whenRootExists() {
 
         String rootId = "root-1";
         String rootTitle = "Root";
@@ -281,23 +278,19 @@ class SparkServiceImplTest {
         String child2Id = "child-2";
         Instant now = Instant.now();
 
-        Spark root = new Spark(rootId, rootTitle, "Root desc", null, now, now);
-        Spark child1 = new Spark(child1Id, "Child 1", "Child 1 desc", rootId, now, now);
-        Spark child2 = new Spark(child2Id, "Child 2", "Child 2 desc", rootId, now, now);
+        Spark root = new Spark(rootId, rootTitle, "Root desc", null, List.of(), now, now);
+        Spark child1 = new Spark(child1Id, "Child 1", "Child 1 desc", rootId, List.of(), now, now);
+        Spark child2 = new Spark(child2Id, "Child 2", "Child 2 desc", rootId, List.of(), now, now);
 
         when(sparkRepository.findById(rootId)).thenReturn(Optional.of(root));
         when(sparkRepository.findByParentId(rootId)).thenReturn(List.of(child1, child2));
         when(sparkRepository.findByParentId(child1Id)).thenReturn(List.of());
         when(sparkRepository.findByParentId(child2Id)).thenReturn(List.of());
 
-        SparkTreeDTO result = sparkService.getSparkTree(rootId);
+        List<Spark> result = sparkService.getSparkTreeList(rootId);
 
-        assertThat(result.id()).isEqualTo(rootId);
-        assertThat(result.title()).isEqualTo(rootTitle);
-        assertThat(result.children()).hasSize(2);
-        assertThat(result.children())
-                .extracting(SparkTreeDTO::id)
-                .containsExactlyInAnyOrder(child1Id, child2Id);
+        assertThat(result).hasSize(3);
+        assertThat(result).extracting(Spark::getId).containsExactlyInAnyOrder(rootId, child1Id, child2Id);
 
         verify(sparkRepository).findById(rootId);
         verify(sparkRepository).findByParentId(rootId);
@@ -306,33 +299,33 @@ class SparkServiceImplTest {
     }
 
     @Test
-    void getSparkTree_returnsLeafNode_whenNoChildren() {
+    void getSparkTreeList_returnsOneElement_whenNoChildren() {
 
         String rootId = "leaf-1";
         Instant now = Instant.now();
 
-        Spark root = new Spark(rootId, "Leaf", "Leaf desc", null, now, now);
+        Spark root = new Spark(rootId, "Leaf", "Leaf desc", null, List.of(), now, now);
 
         when(sparkRepository.findById(rootId)).thenReturn(Optional.of(root));
         when(sparkRepository.findByParentId(rootId)).thenReturn(List.of());
 
-        SparkTreeDTO result = sparkService.getSparkTree(rootId);
+        List<Spark> result = sparkService.getSparkTreeList(rootId);
 
-        assertThat(result.id()).isEqualTo(rootId);
-        assertThat(result.children()).isEmpty();
+        assertThat(result).hasSize(1);
+        assertThat(result.getFirst().getId()).isEqualTo(rootId);
 
         verify(sparkRepository).findById(rootId);
         verify(sparkRepository).findByParentId(rootId);
     }
 
     @Test
-    void getSparkTree_throws_whenRootNotFound() {
+    void getSparkTreeList_throws_whenRootNotFound() {
 
         String missingRootId = "missing-id";
 
         when(sparkRepository.findById(missingRootId)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> sparkService.getSparkTree(missingRootId))
+        assertThatThrownBy(() -> sparkService.getSparkTreeList(missingRootId))
                 .isInstanceOf(SparkNotFoundException.class)
                 .hasMessageContaining(missingRootId);
 
@@ -341,15 +334,14 @@ class SparkServiceImplTest {
     }
 
     @Test
-    void updateSpark_updatesEntityAndReturnsDto_whenTitleIsUniqueOrUnchanged() {
+    void updateSpark_updatesEntityAndReturnsUpdatedSpark_whenTitleIsUniqueOrUnchanged() {
 
         String id = "spark-1";
         String oldTitle = "Old title";
         String oldDescription = "Old desc";
         Instant createdAt = Instant.now().minusSeconds(3600);
 
-        // entity from DB
-        Spark existing = new Spark(id, oldTitle, oldDescription, null, createdAt, createdAt);
+        Spark existing = new Spark(id, oldTitle, oldDescription, null, List.of(), createdAt, createdAt);
 
         String newTitle = "New title";
         String newDescription = "New desc";
@@ -361,7 +353,7 @@ class SparkServiceImplTest {
         when(sparkRepository.save(any(Spark.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
-        SparkDTO result = sparkService.updateSpark(id, dto);
+        Spark result = sparkService.updateSpark(id, dto);
 
         ArgumentCaptor<Spark> captor = ArgumentCaptor.forClass(Spark.class);
         verify(sparkRepository).save(captor.capture());
@@ -374,9 +366,9 @@ class SparkServiceImplTest {
         assertThat(saved.getUpdatedAt()).isNotNull();
         assertThat(saved.getUpdatedAt()).isAfter(createdAt);
 
-        assertThat(result.id()).isEqualTo(id);
-        assertThat(result.title()).isEqualTo(newTitle);
-        assertThat(result.description()).isEqualTo(newDescription);
+        assertThat(result.getId()).isEqualTo(id);
+        assertThat(result.getTitle()).isEqualTo(newTitle);
+        assertThat(result.getDescription()).isEqualTo(newDescription);
 
         verify(sparkRepository).findById(id);
         verify(sparkRepository).existsByTitle(newTitle);
@@ -407,7 +399,7 @@ class SparkServiceImplTest {
         String oldDescription = "Old desc";
         Instant now = Instant.now();
 
-        Spark existing = new Spark(id, oldTitle, oldDescription, null, now, now);
+        Spark existing = new Spark(id, oldTitle, oldDescription, null, List.of(), now, now);
 
         String duplicateTitle = "Duplicate title";
         UpdateSparkRequestDTO dto = new UpdateSparkRequestDTO(duplicateTitle, "New desc");
@@ -430,14 +422,14 @@ class SparkServiceImplTest {
         String id = "spark-1";
         Instant createdAt = Instant.now().minusSeconds(7200);
 
-        Spark existing = new Spark(id, "Original title", "Original desc", null, createdAt, createdAt);
+        Spark existing = new Spark(id, "Original title", "Original desc", null, List.of(), createdAt, createdAt);
 
         PatchSparkRequestDTO dto = new PatchSparkRequestDTO(null, "New partial desc");
 
         when(sparkRepository.findById(id)).thenReturn(Optional.of(existing));
         when(sparkRepository.save(any(Spark.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        SparkDTO result = sparkService.partialUpdateSpark(id, dto);
+        Spark result = sparkService.partialUpdateSpark(id, dto);
 
         ArgumentCaptor<Spark> captor = ArgumentCaptor.forClass(Spark.class);
         verify(sparkRepository).save(captor.capture());
@@ -448,9 +440,9 @@ class SparkServiceImplTest {
         assertThat(saved.getUpdatedAt()).isNotNull();
         assertThat(saved.getUpdatedAt()).isAfter(createdAt);
 
-        assertThat(result.id()).isEqualTo(id);
-        assertThat(result.title()).isEqualTo("Original title");
-        assertThat(result.description()).isEqualTo("New partial desc");
+        assertThat(result.getId()).isEqualTo(id);
+        assertThat(result.getTitle()).isEqualTo("Original title");
+        assertThat(result.getDescription()).isEqualTo("New partial desc");
 
         verify(sparkRepository).findById(id);
         verify(sparkRepository, never()).existsByTitle(anyString());
@@ -479,7 +471,7 @@ class SparkServiceImplTest {
         String id = "spark-1";
         Instant now = Instant.now();
 
-        Spark existing = new Spark(id, "Original", "Desc", null, now, now);
+        Spark existing = new Spark(id, "Original", "Desc", null, List.of(), now, now);
 
         String duplicateTitle = "Duplicate title";
         PatchSparkRequestDTO dto = new PatchSparkRequestDTO(duplicateTitle, null);
@@ -506,10 +498,10 @@ class SparkServiceImplTest {
 
         Instant now = Instant.now();
 
-        Spark root = new Spark(rootId, "Root", "Root desc", null, now, now);
-        Spark child1 = new Spark(child1Id, "Child 1", "Desc 1", rootId, now, now);
-        Spark child2 = new Spark(child2Id, "Child 2", "Desc 2", rootId, now, now);
-        Spark grandchild = new Spark(grandchildId, "Grandchild", "Desc gc", child1Id, now, now);
+        Spark root = new Spark(rootId, "Root", "Root desc", null, List.of(), now, now);
+        Spark child1 = new Spark(child1Id, "Child 1", "Desc 1", rootId, List.of(), now, now);
+        Spark child2 = new Spark(child2Id, "Child 2", "Desc 2", rootId, List.of(), now, now);
+        Spark grandchild = new Spark(grandchildId, "Grandchild", "Desc gc", child1Id, List.of(), now, now);
 
         when(sparkRepository.findById(rootId)).thenReturn(Optional.of(root));
         when(sparkRepository.findByParentId(rootId)).thenReturn(List.of(child1, child2));
@@ -549,9 +541,9 @@ class SparkServiceImplTest {
 
         Instant now = Instant.now();
 
-        Spark root = new Spark(rootId, "Root", "Root desc", parentId, now, now);
-        Spark child1 = new Spark(child1Id, "Child 1", "Desc 1", rootId, now, now);
-        Spark child2 = new Spark(child2Id, "Child 2", "Desc 2", rootId, now, now);
+        Spark root = new Spark(rootId, "Root", "Root desc", parentId, List.of(), now, now);
+        Spark child1 = new Spark(child1Id, "Child 1", "Desc 1", rootId, List.of(), now, now);
+        Spark child2 = new Spark(child2Id, "Child 2", "Desc 2", rootId, List.of(), now, now);
 
         when(sparkRepository.findById(rootId)).thenReturn(Optional.of(root));
         when(sparkRepository.findByParentId(rootId)).thenReturn(List.of(child1, child2));
@@ -597,17 +589,17 @@ class SparkServiceImplTest {
     void searchSparks_noFilters_callsFindAll() {
 
         Instant now = Instant.now();
-        Spark s1 = new Spark("id1", "Title 1", "D1", null, now, now);
-        Spark s2 = new Spark("id2", "Title 2", "D2", "parent-1", now, now);
+        Spark s1 = new Spark("id1", "Title 1", "D1", null, List.of(), now, now);
+        Spark s2 = new Spark("id2", "Title 2", "D2", "parent-1", List.of(), now, now);
 
         Page<Spark> page = new PageImpl<>(List.of(s1, s2), PageRequest.of(0, 20), 2);
 
         when(sparkRepository.findAll(any(Pageable.class))).thenReturn(page);
 
-        Page<SparkDTO> result = sparkService.searchSparks(null, null, 0, 20);
+        Page<Spark> result = sparkService.searchSparks(null, null, 0, 20);
 
         assertThat(result.getContent()).hasSize(2);
-        assertThat(result.getContent()).extracting(SparkDTO::id).containsExactly("id1", "id2");
+        assertThat(result.getContent()).extracting(Spark::getId).containsExactly("id1", "id2");
 
         verify(sparkRepository).findAll(any(Pageable.class));
     }
@@ -618,7 +610,7 @@ class SparkServiceImplTest {
         when(sparkRepository.findByParentIdIsNull(any(Pageable.class)))
                 .thenReturn(Page.empty());
 
-        Page<SparkDTO> result = sparkService.searchSparks(null, "ROOT", 0, 20);
+        Page<Spark> result = sparkService.searchSparks(null, "ROOT", 0, 20);
 
         assertThat(result.getContent()).isEmpty();
 
@@ -636,7 +628,7 @@ class SparkServiceImplTest {
                 any(Pageable.class)))
                 .thenReturn(Page.empty());
 
-        Page<SparkDTO> result = sparkService.searchSparks("test", parentId, 0, 20);
+        Page<Spark> result = sparkService.searchSparks("test", parentId, 0, 20);
 
         assertThat(result.getContent()).isEmpty();
 

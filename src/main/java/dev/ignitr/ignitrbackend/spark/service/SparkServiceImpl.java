@@ -1,6 +1,10 @@
 package dev.ignitr.ignitrbackend.spark.service;
 
 import dev.ignitr.ignitrbackend.common.utils.LoggingUtils;
+import dev.ignitr.ignitrbackend.score.dto.SparkScoreRequestDTO;
+import dev.ignitr.ignitrbackend.score.dto.SparkTreeScoreResponseDTO;
+import dev.ignitr.ignitrbackend.score.mapper.SparkScoreMapper;
+import dev.ignitr.ignitrbackend.score.service.SparkScoreService;
 import dev.ignitr.ignitrbackend.spark.dto.*;
 import dev.ignitr.ignitrbackend.spark.exception.SparkAlreadyExistsException;
 import dev.ignitr.ignitrbackend.spark.exception.SparkNotFoundException;
@@ -9,6 +13,7 @@ import dev.ignitr.ignitrbackend.spark.model.Spark;
 import dev.ignitr.ignitrbackend.spark.model.SparkDeleteMode;
 import dev.ignitr.ignitrbackend.spark.repository.SparkRepository;
 
+import dev.ignitr.ignitrbackend.spark.tree.SparkTree;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
@@ -18,10 +23,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Deque;
-import java.util.List;
+import java.util.*;
 
 import static dev.ignitr.ignitrbackend.common.utils.StringUtils.isNotNullOrEmpty;
 
@@ -30,9 +32,11 @@ public class SparkServiceImpl implements SparkService {
 
     private static final Logger logger = LoggerFactory.getLogger(SparkServiceImpl.class);
 
+    private final SparkScoreService sparkScoreService;
     private final SparkRepository sparkRepository;
 
-    public SparkServiceImpl(SparkRepository sparkRepository) {
+    public SparkServiceImpl(SparkRepository sparkRepository, SparkScoreService sparkScoreService) {
+        this.sparkScoreService = sparkScoreService;
         this.sparkRepository = sparkRepository;
     }
 
@@ -133,20 +137,20 @@ public class SparkServiceImpl implements SparkService {
     }
 
     @Override
-    public List<Spark> getSparkTreeList(String rootId) {
+    public SparkTree getSparkTree(String rootId) {
 
-        LoggingUtils.debug(logger, "getSparkTreeList", rootId,
+        LoggingUtils.debug(logger, "getSparkTree", rootId,
                 "Fetching Spark subtree...");
 
         Spark root = getSparkById(rootId);
 
-        List<Spark> sparkList = new ArrayList<>();
+        Map<String, Spark> sparkMap = new HashMap<>();
         Deque<Spark> stack = new ArrayDeque<>();
         stack.push(root);
 
         while (!stack.isEmpty()) {
             Spark current = stack.pop();
-            sparkList.add(current);
+            sparkMap.put(current.getId(), current);
 
             List<Spark> children = sparkRepository.findByParentId(current.getId());
             for (Spark child : children) {
@@ -156,10 +160,18 @@ public class SparkServiceImpl implements SparkService {
             }
         }
 
-        LoggingUtils.info(logger, "getSparkTreeList", root.getId(),
-                "Fetched Spark subtree with {} Sparks.", sparkList.size());
+        LoggingUtils.info(logger, "getSparkTree", root.getId(),
+                "Fetched Spark subtree with {} Sparks.", sparkMap.size());
 
-        return sparkList;
+        try {
+            Map<String, SparkScoreRequestDTO> sparkScoreRequestMap = SparkScoreMapper.toDtoMap(sparkMap);
+            SparkTreeScoreResponseDTO scoredTree = sparkScoreService.scoreTree(root.getId(), sparkScoreRequestMap);
+            return SparkScoreMapper.toScoredSparkTree(sparkMap, scoredTree);
+        } catch (Exception e) {
+            LoggingUtils.error(logger, "getSparkTree", root.getId(), e,
+                    "Error scoring Spark tree, returning unscored tree.");
+            return SparkMapper.toSparkTree(sparkMap, root.getId());
+        }
     }
 
     @Override

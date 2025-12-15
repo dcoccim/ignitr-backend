@@ -4,6 +4,7 @@ import dev.ignitr.ignitrbackend.spark.dto.*;
 import dev.ignitr.ignitrbackend.spark.exception.SparkNotFoundException;
 import dev.ignitr.ignitrbackend.spark.model.Spark;
 import dev.ignitr.ignitrbackend.spark.model.SparkDeleteMode;
+import dev.ignitr.ignitrbackend.spark.tree.SparkTree;
 import org.springframework.data.domain.Page;
 
 import java.util.List;
@@ -20,7 +21,7 @@ public interface SparkService {
 
     List<Spark> getChildren(String parentId);
 
-    List<Spark> getSparkTreeList(String rootId);
+    SparkTree getSparkTree(String rootId);
 
     Spark updateSpark(String id, UpdateSparkRequestDTO dto);
 

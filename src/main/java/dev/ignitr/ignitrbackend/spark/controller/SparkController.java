@@ -7,6 +7,7 @@ import dev.ignitr.ignitrbackend.spark.model.Spark;
 import dev.ignitr.ignitrbackend.spark.model.SparkDeleteMode;
 import dev.ignitr.ignitrbackend.spark.service.SparkService;
 
+import dev.ignitr.ignitrbackend.spark.tree.SparkTree;
 import jakarta.validation.Valid;
 
 import org.springframework.data.domain.Page;
@@ -81,8 +82,8 @@ public class SparkController {
             produces = MediaType.APPLICATION_JSON_VALUE
     )
     public ResponseEntity<SparkTreeDTO> getSparkTree(@PathVariable String id) {
-        List<Spark> sparkTreeList = sparkService.getSparkTreeList(id);
-        SparkTreeDTO response = SparkMapper.toSparkTreeDto(sparkTreeList, id);
+        SparkTree sparkTree = sparkService.getSparkTree(id);
+        SparkTreeDTO response = SparkMapper.toSparkTreeDto(sparkTree);
         return ResponseEntity.ok(response);
     }
 

@@ -1,12 +1,13 @@
 package dev.ignitr.ignitrbackend.spark.mapper;
 
 import dev.ignitr.ignitrbackend.reason.model.ReasonType;
+import dev.ignitr.ignitrbackend.score.tree.ScoredSparkTree;
 import dev.ignitr.ignitrbackend.spark.dto.*;
 import dev.ignitr.ignitrbackend.spark.model.Spark;
+import dev.ignitr.ignitrbackend.spark.tree.SparkTree;
 
 import java.time.Instant;
-import java.util.HashMap;
-import java.util.List;
+import java.util.ArrayList;
 import java.util.Map;
 
 public class SparkMapper {
@@ -66,31 +67,62 @@ public class SparkMapper {
         );
     }
 
-    public static SparkTreeDTO toSparkTreeDto(List<Spark> sparks, String rootId) {
-        Map<String, SparkTreeDTO> map = new HashMap<>(sparks.size());
-        for (Spark spark : sparks) {
-            int goodReasonsCount = (int) spark.getReasons()
-                    .stream()
-                    .filter(r -> r.getType() == ReasonType.GOOD)
-                    .count();
-            int badReasonsCount = (int) spark.getReasons()
-                    .stream()
-                    .filter(r -> r.getType() == ReasonType.BAD)
-                    .count();
-            SparkTreeDTO dto = SparkTreeDTO.from(spark, goodReasonsCount, badReasonsCount);
-            map.put(spark.getId(), dto);
+    public static SparkTree toSparkTree(Map<String, Spark> sparkMap, String rootId) {
+        Spark rootSpark = sparkMap.get(rootId);
+        if (rootSpark == null) {
+            return null;
         }
 
-        for (Spark spark : sparks) {
+        int goodReasonsCount = 0;
+        int badReasonsCount = 0;
+        for (var r : rootSpark.getReasons()) {
+            if (r.getType() == ReasonType.GOOD) {
+                goodReasonsCount++;
+            } else if (r.getType() == ReasonType.BAD) {
+                badReasonsCount++;
+            }
+        }
+
+        SparkTree rootNode = SparkTree.fromSpark(rootSpark, goodReasonsCount, badReasonsCount, new ArrayList<>());
+
+        for (Spark spark : sparkMap.values()) {
             String parentId = spark.getParentId();
-            if (parentId != null) {
-                SparkTreeDTO parentDto = map.get(parentId);
-                if (parentDto != null) {
-                    parentDto.children().add(map.get(spark.getId()));
+            if (parentId != null && parentId.equals(rootId)) {
+                SparkTree childNode = toSparkTree(sparkMap, spark.getId());
+                if (childNode != null) {
+                    rootNode.getChildren().add(childNode);
                 }
             }
         }
 
-        return map.get(rootId);
+        return rootNode;
+    }
+
+
+    public static SparkTreeDTO toSparkTreeDto(SparkTree sparkTree)  {
+
+        Integer score = null;
+
+        if(sparkTree instanceof ScoredSparkTree){
+            score = ((ScoredSparkTree) sparkTree).getScore();
+        }
+
+        SparkTreeDTO dto = new SparkTreeDTO(
+                sparkTree.getId(),
+                sparkTree.getTitle(),
+                sparkTree.getDescription(),
+                sparkTree.getGoodReasonsCount(),
+                sparkTree.getBadReasonsCount(),
+                score,
+                sparkTree.getCreatedAt(),
+                sparkTree.getUpdatedAt(),
+                new java.util.ArrayList<>()
+        );
+
+        for (SparkTree child : sparkTree.getChildren()) {
+            dto.children().add(toSparkTreeDto(child));
+        }
+
+        return dto;
     }
 }

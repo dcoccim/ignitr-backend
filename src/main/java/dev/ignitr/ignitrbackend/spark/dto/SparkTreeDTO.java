@@ -1,9 +1,6 @@
 package dev.ignitr.ignitrbackend.spark.dto;
 
-import dev.ignitr.ignitrbackend.spark.model.Spark;
-
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.List;
 
 public record SparkTreeDTO(
@@ -12,20 +9,8 @@ public record SparkTreeDTO(
         String description,
         int goodReasonsCount,
         int badReasonsCount,
+        Integer score,
         Instant createdAt,
         Instant updatedAt,
         List<SparkTreeDTO> children
-) {
-    public static SparkTreeDTO from(Spark s, int goodReasonsCount, int badReasonsCount) {
-        return new SparkTreeDTO(
-                s.getId(),
-                s.getTitle(),
-                s.getDescription(),
-                goodReasonsCount,
-                badReasonsCount,
-                s.getCreatedAt(),
-                s.getUpdatedAt(),
-                new ArrayList<>()
-        );
-    }
-}
+) {}

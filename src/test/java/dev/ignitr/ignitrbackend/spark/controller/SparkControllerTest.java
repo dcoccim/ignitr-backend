@@ -10,6 +10,7 @@ import dev.ignitr.ignitrbackend.spark.exception.SparkNotFoundException;
 import dev.ignitr.ignitrbackend.spark.model.Spark;
 import dev.ignitr.ignitrbackend.spark.model.SparkDeleteMode;
 import dev.ignitr.ignitrbackend.spark.service.SparkService;
+import dev.ignitr.ignitrbackend.spark.tree.SparkTree;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -22,6 +23,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.hamcrest.Matchers.is;
@@ -292,7 +294,12 @@ class SparkControllerTest {
                 now
         );
 
-        when(sparkService.getSparkTreeList(rootId)).thenReturn(List.of(root, child1, child2, childOfChild1));
+        SparkTree childOfChildTree1 = SparkTree.fromSpark(childOfChild1, 0, 0, new ArrayList<>());
+        SparkTree childTree1 = SparkTree.fromSpark(child1, 0, 0, List.of(childOfChildTree1));
+        SparkTree childTree2 = SparkTree.fromSpark(child2, 0, 0, new ArrayList<>());
+        SparkTree tree = SparkTree.fromSpark(root, 0, 0, List.of(childTree1, childTree2));
+
+        when(sparkService.getSparkTree(rootId)).thenReturn(tree);
 
         mockMvc.perform(get("/sparks/{id}/tree", rootId)
                         .accept(MediaType.APPLICATION_JSON))
@@ -319,7 +326,7 @@ class SparkControllerTest {
     void getSparkTree_returns404AndApiError_whenRootNotFound() throws Exception {
 
         String missingId = "missing-id";
-        when(sparkService.getSparkTreeList(missingId))
+        when(sparkService.getSparkTree(missingId))
                 .thenThrow(new SparkNotFoundException(missingId));
 
         mockMvc.perform(get("/sparks/{id}/tree", missingId)

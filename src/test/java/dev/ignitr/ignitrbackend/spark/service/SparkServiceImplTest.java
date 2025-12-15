@@ -1,5 +1,6 @@
 package dev.ignitr.ignitrbackend.spark.service;
 
+import dev.ignitr.ignitrbackend.score.service.SparkScoreService;
 import dev.ignitr.ignitrbackend.spark.dto.CreateSparkRequestDTO;
 import dev.ignitr.ignitrbackend.spark.dto.PatchSparkRequestDTO;
 import dev.ignitr.ignitrbackend.spark.dto.UpdateSparkRequestDTO;
@@ -8,6 +9,7 @@ import dev.ignitr.ignitrbackend.spark.exception.SparkNotFoundException;
 import dev.ignitr.ignitrbackend.spark.model.Spark;
 import dev.ignitr.ignitrbackend.spark.model.SparkDeleteMode;
 import dev.ignitr.ignitrbackend.spark.repository.SparkRepository;
+import dev.ignitr.ignitrbackend.spark.tree.SparkTree;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -34,11 +36,15 @@ class SparkServiceImplTest {
     @Mock
     private SparkRepository sparkRepository;
 
+    @Mock
+    private SparkScoreService sparkScoreService;
+
     private SparkService sparkService;
+
 
     @BeforeEach
     void setUp() {
-        sparkService = new SparkServiceImpl(sparkRepository);
+        sparkService = new SparkServiceImpl(sparkRepository, sparkScoreService);
     }
 
     @Test
@@ -287,15 +293,14 @@ class SparkServiceImplTest {
         when(sparkRepository.findByParentId(child1Id)).thenReturn(List.of());
         when(sparkRepository.findByParentId(child2Id)).thenReturn(List.of());
 
-        List<Spark> result = sparkService.getSparkTreeList(rootId);
+        SparkTree result = sparkService.getSparkTree(rootId);
 
-        assertThat(result).hasSize(3);
-        assertThat(result).extracting(Spark::getId).containsExactlyInAnyOrder(rootId, child1Id, child2Id);
-
-        verify(sparkRepository).findById(rootId);
-        verify(sparkRepository).findByParentId(rootId);
-        verify(sparkRepository).findByParentId(child1Id);
-        verify(sparkRepository).findByParentId(child2Id);
+        assertThat(result).isNotNull();
+        assertThat(result.getId()).isEqualTo(rootId);
+        assertThat(result.getChildren()).hasSize(2);
+        assertThat(result.getChildren())
+                .extracting(SparkTree::getId)
+                .containsExactlyInAnyOrder(child1Id, child2Id);
     }
 
     @Test
@@ -309,10 +314,10 @@ class SparkServiceImplTest {
         when(sparkRepository.findById(rootId)).thenReturn(Optional.of(root));
         when(sparkRepository.findByParentId(rootId)).thenReturn(List.of());
 
-        List<Spark> result = sparkService.getSparkTreeList(rootId);
+        SparkTree result = sparkService.getSparkTree(rootId);
 
-        assertThat(result).hasSize(1);
-        assertThat(result.getFirst().getId()).isEqualTo(rootId);
+        assertThat(result).isNotNull();
+        assertThat(result.getId()).isEqualTo(rootId);
 
         verify(sparkRepository).findById(rootId);
         verify(sparkRepository).findByParentId(rootId);
@@ -325,7 +330,7 @@ class SparkServiceImplTest {
 
         when(sparkRepository.findById(missingRootId)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> sparkService.getSparkTreeList(missingRootId))
+        assertThatThrownBy(() -> sparkService.getSparkTree(missingRootId))
                 .isInstanceOf(SparkNotFoundException.class)
                 .hasMessageContaining(missingRootId);
 

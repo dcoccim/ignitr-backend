@@ -15,6 +15,7 @@ public class Reason {
     private String id;
     private ReasonType type;
     private String content;
+    private Integer votes = 1;
     private Instant createdAt;
     private Instant updatedAt;
 

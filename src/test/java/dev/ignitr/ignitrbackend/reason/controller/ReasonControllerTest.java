@@ -1,6 +1,5 @@
 package dev.ignitr.ignitrbackend.reason.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.ignitr.ignitrbackend.common.error.GlobalExceptionHandler;
 import dev.ignitr.ignitrbackend.reason.dto.CreateReasonRequestDTO;
 import dev.ignitr.ignitrbackend.reason.dto.UpdateReasonRequestDTO;
@@ -12,14 +11,16 @@ import dev.ignitr.ignitrbackend.reason.service.ReasonService;
 import dev.ignitr.ignitrbackend.spark.exception.SparkNotFoundException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import tools.jackson.databind.ObjectMapper;
 
 import java.time.Instant;
 import java.util.List;
@@ -39,7 +40,7 @@ class ReasonControllerTest {
     @Autowired
     private ObjectMapper objectMapper;
 
-    @MockBean
+    @MockitoBean
     private ReasonService reasonService;
 
     @Test
@@ -139,7 +140,7 @@ class ReasonControllerTest {
         Reason reason1 = buildReason("r1", ReasonType.GOOD, "Great");
         Reason reason2 = buildReason("r2", ReasonType.BAD, "Needs work");
 
-        Page<Reason> page = new PageImpl<>(List.of(reason1, reason2), PageRequest.of(0, 10), 2);
+        var page = new PageImpl<>(List.of(reason1, reason2), PageRequest.of(0, 10), 2);
 
         when(reasonService.getReasonsBySparkId(sparkId, null, 0, 10)).thenReturn(page);
 

@@ -13,7 +13,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.Page;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -102,7 +101,7 @@ class ReasonServiceImplTest {
 
         when(sparkService.getSparkById(sparkId)).thenReturn(spark);
 
-        Page<Reason> page = reasonService.getReasonsBySparkId(sparkId, "GOOD", 0, 2);
+        var page = reasonService.getReasonsBySparkId(sparkId, "GOOD", 0, 2);
 
         assertThat(page.getTotalElements()).isEqualTo(2);
         assertThat(page.getContent()).containsExactly(r1, r3);

@@ -1,6 +1,5 @@
 package dev.ignitr.ignitrbackend.spark.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.ignitr.ignitrbackend.common.error.GlobalExceptionHandler;
 import dev.ignitr.ignitrbackend.spark.dto.CreateSparkRequestDTO;
 import dev.ignitr.ignitrbackend.spark.dto.PatchSparkRequestDTO;
@@ -13,14 +12,15 @@ import dev.ignitr.ignitrbackend.spark.service.SparkService;
 import dev.ignitr.ignitrbackend.spark.tree.SparkTree;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import tools.jackson.databind.ObjectMapper;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -45,7 +45,7 @@ class SparkControllerTest {
     @Autowired
     private ObjectMapper objectMapper;
 
-    @MockBean
+    @MockitoBean
     private SparkService sparkService;
 
     @Test
@@ -559,7 +559,7 @@ class SparkControllerTest {
         Spark spark1 = new Spark(id1, title1, "Desc 1", null, List.of(), now, now);
         Spark spark2 = new Spark(id2, title2, "Desc 2", null, List.of(), now, now);
 
-        Page<Spark> page = new PageImpl<>(
+        var page = new PageImpl<>(
                 List.of(spark1, spark2),
                 PageRequest.of(0, 20),
                 2

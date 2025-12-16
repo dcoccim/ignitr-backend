@@ -597,11 +597,11 @@ class SparkServiceImplTest {
         Spark s1 = new Spark("id1", "Title 1", "D1", null, List.of(), now, now);
         Spark s2 = new Spark("id2", "Title 2", "D2", "parent-1", List.of(), now, now);
 
-        Page<Spark> page = new PageImpl<>(List.of(s1, s2), PageRequest.of(0, 20), 2);
+        var page = new PageImpl<>(List.of(s1, s2), PageRequest.of(0, 20), 2);
 
         when(sparkRepository.findAll(any(Pageable.class))).thenReturn(page);
 
-        Page<Spark> result = sparkService.searchSparks(null, null, 0, 20);
+        var result = sparkService.searchSparks(null, null, 0, 20);
 
         assertThat(result.getContent()).hasSize(2);
         assertThat(result.getContent()).extracting(Spark::getId).containsExactly("id1", "id2");
@@ -615,7 +615,7 @@ class SparkServiceImplTest {
         when(sparkRepository.findByParentIdIsNull(any(Pageable.class)))
                 .thenReturn(Page.empty());
 
-        Page<Spark> result = sparkService.searchSparks(null, "ROOT", 0, 20);
+        var result = sparkService.searchSparks(null, "ROOT", 0, 20);
 
         assertThat(result.getContent()).isEmpty();
 
@@ -633,7 +633,7 @@ class SparkServiceImplTest {
                 any(Pageable.class)))
                 .thenReturn(Page.empty());
 
-        Page<Spark> result = sparkService.searchSparks("test", parentId, 0, 20);
+        var result = sparkService.searchSparks("test", parentId, 0, 20);
 
         assertThat(result.getContent()).isEmpty();
 

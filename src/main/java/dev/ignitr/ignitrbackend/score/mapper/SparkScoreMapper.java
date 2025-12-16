@@ -29,7 +29,7 @@ public class SparkScoreMapper {
                                             .toList()
                                             : new ArrayList<>();
                             String id = s.getId() != null ? s.getId() : e.getKey();
-                            return new SparkScoreRequestDTO(id, s.getParentId(), reasonsDtoList);
+                            return new SparkScoreRequestDTO(id, s.getParentId(), reasonsDtoList, s.getCreatedAt());
                         }
                 ));
     }

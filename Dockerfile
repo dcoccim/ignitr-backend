@@ -8,7 +8,7 @@ RUN chmod +x mvnw
 
 COPY src src
 
-RUN ./mvnw -q -DskipTests package
+RUN ./mvnw -q -DskipTests clean package
 
 # Runtime stage
 FROM eclipse-temurin:21-jre

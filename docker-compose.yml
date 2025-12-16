@@ -1,21 +1,54 @@
 services:
-  api:
-    build:
-      context: .
-    container_name: ignitr-api
-    env_file:
-      - .env.local
-    ports:
-      - "8080:8080"
-    depends_on:
-      - mongo
-    restart: unless-stopped
-
-  mongo:
+  ignitr-mongo:
     image: mongo:7
     container_name: ignitr-mongo
     restart: unless-stopped
     ports:
       - "27017:27017"
     volumes:
-      - ./mongo-data:/data/db
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD-SHELL", "mongosh --quiet --eval 'db.runCommand({ ping: 1 })' localhost:27017/test || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  ignitr-scorer:
+    build:
+      context: ../ignitr-scorer
+      dockerfile: ../ignitr-scorer/Dockerfile
+    container_name: ignitr-scorer
+    image: ignitr-scorer:latest
+    restart: unless-stopped
+    env_file:
+      - ../ignitr-scorer/.env
+    ports:
+      - "${PORT:-3000}:3000"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "node -e \"fetch('http://localhost:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  ignitr-api:
+    build:
+      context: .
+    container_name: ignitr-api
+    image: ignitr-api:latest
+    restart: unless-stopped
+    env_file:
+      - .env.local
+    ports:
+      - "8080:8080"
+    depends_on:
+      ignitr-mongo:
+        condition: service_healthy
+      ignitr-scorer:
+        condition: service_healthy
+
+volumes:
+  mongo-data:

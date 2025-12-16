@@ -10,17 +10,17 @@ import org.springframework.web.client.RestClient;
 public class RestClientConfig {
 
     @Bean
-    public RestClient restClient(
-            RestClient.Builder builder,
-            @Value("${resttemplate.connect-timeout-ms:5000}") int connectTimeoutMs,
-            @Value("${resttemplate.read-timeout-ms:5000}") int readTimeoutMs
+    public RestClient scoringRestClient(
+            @Value("${ignitr.scorer.url:http://localhost:3000/api}") String scorerUrl,
+            @Value("${restclient.connect-timeout-ms:5000}") int connectTimeoutMs,
+            @Value("${restclient.read-timeout-ms:5000}") int readTimeoutMs
     ) {
-
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(connectTimeoutMs);
         factory.setReadTimeout(readTimeoutMs);
 
-        return builder
+        return RestClient.builder()
+                .baseUrl(scorerUrl)
                 .requestFactory(factory)
                 .build();
     }

@@ -28,7 +28,7 @@ class SystemControllerTest {
 
         when(systemService.isOk()).thenReturn("OK");
 
-        mockMvc.perform(get("/api/health").accept(MediaType.TEXT_PLAIN))
+        mockMvc.perform(get("/system/health").accept(MediaType.TEXT_PLAIN))
                 .andExpect(status().isOk())
                 .andExpect(content().string("OK"));
     }

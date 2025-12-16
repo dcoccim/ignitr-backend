@@ -17,7 +17,7 @@ tags:
     description: Operations for managing Reasons attached to Sparks
 
 paths:
-  /health:
+  /system/health:
     get:
       tags:
         - System

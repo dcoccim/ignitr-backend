@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/health")
+@RequestMapping("/system")
 public class SystemController {
 
     private final SystemService systemService;
@@ -16,7 +16,7 @@ public class SystemController {
         this.systemService = systemService;
     }
 
-    @GetMapping(produces = MediaType.TEXT_PLAIN_VALUE)
+    @GetMapping(path = "/health", produces = MediaType.TEXT_PLAIN_VALUE)
     public String health() {
         return systemService.isOk();
     }

@@ -1,23 +1,27 @@
 package dev.ignitr.ignitrbackend.config;
 
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import org.springframework.web.client.RestClient;
 
 @Configuration
-public class RestTemplateConfig {
+public class RestClientConfig {
 
     @Bean
-    public RestTemplate restTemplate(
-            RestTemplateBuilder builder,
+    public RestClient restClient(
+            RestClient.Builder builder,
             @Value("${resttemplate.connect-timeout-ms:5000}") int connectTimeoutMs,
             @Value("${resttemplate.read-timeout-ms:5000}") int readTimeoutMs
     ) {
+
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(connectTimeoutMs);
+        factory.setReadTimeout(readTimeoutMs);
+
         return builder
-                .setConnectTimeout(java.time.Duration.ofMillis(connectTimeoutMs))
-                .setReadTimeout(java.time.Duration.ofMillis(readTimeoutMs))
+                .requestFactory(factory)
                 .build();
     }
 }

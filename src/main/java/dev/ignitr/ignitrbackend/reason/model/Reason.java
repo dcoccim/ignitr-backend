@@ -12,7 +12,7 @@ import java.time.Instant;
 @TypeAlias("Reason")
 public class Reason {
 
-    private String id;
+    private ObjectId id;
     private ReasonType type;
     private String content;
     private Integer votes = 1;
@@ -20,19 +20,19 @@ public class Reason {
     private Instant updatedAt;
 
     public Reason() {
-        this.id = new ObjectId().toHexString();
+        this.id = new ObjectId();
     }
 
     public Reason(ReasonType type, String content, Instant createdAt, Instant updatedAt) {
-        this.id = new ObjectId().toHexString();
+        this.id = new ObjectId();
         this.type = type;
         this.content = content;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
     }
 
-    public Reason(String id, ReasonType type, String content, Instant createdAt, Instant updatedAt) {
-        this.id = id != null ? id : new ObjectId().toHexString();
+    public Reason(ObjectId id, ReasonType type, String content, Instant createdAt, Instant updatedAt) {
+        this.id = id != null ? id : new ObjectId();
         this.type = type;
         this.content = content;
         this.createdAt = createdAt;

@@ -9,6 +9,7 @@ import dev.ignitr.ignitrbackend.reason.model.Reason;
 import dev.ignitr.ignitrbackend.reason.model.ReasonType;
 import dev.ignitr.ignitrbackend.reason.service.ReasonService;
 import dev.ignitr.ignitrbackend.spark.exception.SparkNotFoundException;
+import org.bson.types.ObjectId;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -43,14 +44,24 @@ class ReasonControllerTest {
     @MockitoBean
     private ReasonService reasonService;
 
+    private Reason buildReason(ObjectId id, ReasonType type, String content) {
+        Reason reason = new Reason();
+        reason.setId(id);
+        reason.setType(type);
+        reason.setContent(content);
+        reason.setCreatedAt(Instant.now());
+        reason.setUpdatedAt(Instant.now());
+        return reason;
+    }
+
     @Test
     void createReason_returns201AndBody_onSuccess() throws Exception {
 
         String sparkId = "spark-1";
         CreateReasonRequestDTO request = new CreateReasonRequestDTO("Great job", ReasonType.GOOD);
-        Reason savedReason = buildReason("reason-1", ReasonType.GOOD, "Great job");
+        Reason savedReason = buildReason(new ObjectId(), ReasonType.GOOD, "Great job");
 
-        when(reasonService.createReason(eq(sparkId), any(CreateReasonRequestDTO.class)))
+        when(reasonService.createReason(eq(sparkId), any(String.class), any(ReasonType.class)))
                 .thenReturn(savedReason);
 
         mockMvc.perform(post("/sparks/{sparkId}/reasons", sparkId)
@@ -58,9 +69,9 @@ class ReasonControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.id", is(savedReason.getId())))
+                .andExpect(jsonPath("$.id", is(savedReason.getId().toHexString())))
                 .andExpect(jsonPath("$.content", is(savedReason.getContent())))
-                .andExpect(jsonPath("$.type", is(savedReason.getType().name())));
+                .andExpect(jsonPath("$.type", is(savedReason.getType().getValue())));
     }
 
     @Test
@@ -69,7 +80,7 @@ class ReasonControllerTest {
         String sparkId = "missing-spark";
         CreateReasonRequestDTO request = new CreateReasonRequestDTO("Insight", ReasonType.GOOD);
 
-        when(reasonService.createReason(eq(sparkId), any(CreateReasonRequestDTO.class)))
+        when(reasonService.createReason(eq(sparkId), any(String.class), any(ReasonType.class)))
                 .thenThrow(new SparkNotFoundException(sparkId));
 
         mockMvc.perform(post("/sparks/{sparkId}/reasons", sparkId)
@@ -102,8 +113,10 @@ class ReasonControllerTest {
     void getReasonById_returns200_onSuccess() throws Exception {
 
         String sparkId = "spark-1";
-        String reasonId = "reason-1";
-        Reason reason = buildReason(reasonId, ReasonType.BAD, "Could improve");
+        ObjectId reasonId = new ObjectId();
+        ReasonType type = ReasonType.BAD;
+        String content = "Could improve";
+        Reason reason = buildReason(reasonId, type, content);
 
         when(reasonService.getReasonById(sparkId, reasonId)).thenReturn(reason);
 
@@ -111,21 +124,21 @@ class ReasonControllerTest {
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.id", is(reasonId)))
-                .andExpect(jsonPath("$.content", is(reason.getContent())))
-                .andExpect(jsonPath("$.type", is(reason.getType().name())));
+                .andExpect(jsonPath("$.id", is(reasonId.toHexString())))
+                .andExpect(jsonPath("$.content", is(content)))
+                .andExpect(jsonPath("$.type", is(type.getValue())));
     }
 
     @Test
     void getReasonById_returns404_whenMissing() throws Exception {
 
         String sparkId = "spark-1";
-        String reasonId = "missing";
+        ObjectId missingReasonId = new ObjectId("000000000000000000000001");
 
-        when(reasonService.getReasonById(sparkId, reasonId))
-                .thenThrow(new ReasonNotFoundException(reasonId));
+        when(reasonService.getReasonById(sparkId, missingReasonId))
+                .thenThrow(new ReasonNotFoundException(missingReasonId));
 
-        mockMvc.perform(get("/sparks/{sparkId}/reasons/{reasonId}", sparkId, reasonId)
+        mockMvc.perform(get("/sparks/{sparkId}/reasons/{reasonId}", sparkId, missingReasonId.toHexString())
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -137,8 +150,10 @@ class ReasonControllerTest {
     void getReasonsBySparkId_returns200AndContent_onSuccess() throws Exception {
 
         String sparkId = "spark-1";
-        Reason reason1 = buildReason("r1", ReasonType.GOOD, "Great");
-        Reason reason2 = buildReason("r2", ReasonType.BAD, "Needs work");
+        ObjectId reason1Id = new ObjectId();
+        ObjectId reason2Id = new ObjectId();
+        Reason reason1 = buildReason(reason1Id, ReasonType.GOOD, "Great");
+        Reason reason2 = buildReason(reason2Id, ReasonType.BAD, "Needs work");
 
         var page = new PageImpl<>(List.of(reason1, reason2), PageRequest.of(0, 10), 2);
 
@@ -149,8 +164,8 @@ class ReasonControllerTest {
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.content[0].id", is("r1")))
-                .andExpect(jsonPath("$.content[1].id", is("r2")))
+                .andExpect(jsonPath("$.content[0].id", is(reason1Id.toHexString())))
+                .andExpect(jsonPath("$.content[1].id", is(reason2Id.toHexString())))
                 .andExpect(jsonPath("$.totalElements", is(2)))
                 .andExpect(jsonPath("$.totalPages", is(1)))
                 .andExpect(jsonPath("$.size", is(10)))
@@ -161,50 +176,54 @@ class ReasonControllerTest {
     void getReasonsBySparkId_passesQueryParamsToService() throws Exception {
 
         String sparkId = "spark-1";
+        ReasonType type = ReasonType.GOOD;
+        int page = 1;
+        int size = 5;
 
-        when(reasonService.getReasonsBySparkId(sparkId, "good", 1, 5)).thenReturn(Page.empty());
+        when(reasonService.getReasonsBySparkId(sparkId, type, page, size)).thenReturn(Page.empty());
 
         mockMvc.perform(get("/sparks/{sparkId}/reasons", sparkId)
-                        .param("type", "good")
-                        .param("page", "1")
-                        .param("size", "5"))
+                        .param("type", type.getValue())
+                        .param("page", String.valueOf(page))
+                        .param("size", String.valueOf(size)))
                 .andExpect(status().isOk());
 
-        verify(reasonService).getReasonsBySparkId(sparkId, "good", 1, 5);
+        verify(reasonService).getReasonsBySparkId(sparkId, ReasonType.GOOD, 1, 5);
     }
 
     @Test
     void updateReason_returns200_onSuccess() throws Exception {
 
         String sparkId = "spark-1";
-        String reasonId = "reason-1";
+        ObjectId reasonId = new ObjectId();
+
         UpdateReasonRequestDTO request = new UpdateReasonRequestDTO("Updated", ReasonType.GOOD);
         Reason updated = buildReason(reasonId, ReasonType.GOOD, "Updated");
 
-        when(reasonService.updateReason(eq(sparkId), eq(reasonId), any(UpdateReasonRequestDTO.class)))
+        when(reasonService.updateReason(eq(sparkId), eq(reasonId), any(String.class), any(ReasonType.class)))
                 .thenReturn(updated);
 
-        mockMvc.perform(put("/sparks/{sparkId}/reasons/{reasonId}", sparkId, reasonId)
+        mockMvc.perform(put("/sparks/{sparkId}/reasons/{reasonId}", sparkId, reasonId.toHexString())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.id", is(reasonId)))
+                .andExpect(jsonPath("$.id", is(reasonId.toHexString())))
                 .andExpect(jsonPath("$.content", is("Updated")))
-                .andExpect(jsonPath("$.type", is("GOOD")));
+                .andExpect(jsonPath("$.type", is(ReasonType.GOOD.getValue())));
     }
 
     @Test
     void updateReason_returns404_whenMissing() throws Exception {
 
         String sparkId = "spark-1";
-        String reasonId = "missing";
+        ObjectId missingReasonId = new ObjectId("000000000000000000000001");
         UpdateReasonRequestDTO request = new UpdateReasonRequestDTO("Updated", ReasonType.GOOD);
 
-        when(reasonService.updateReason(eq(sparkId), eq(reasonId), any(UpdateReasonRequestDTO.class)))
-                .thenThrow(new ReasonNotFoundException(reasonId));
+        when(reasonService.updateReason(eq(sparkId), eq(missingReasonId), any(String.class), any(ReasonType.class)))
+                .thenThrow(new ReasonNotFoundException(missingReasonId));
 
-        mockMvc.perform(put("/sparks/{sparkId}/reasons/{reasonId}", sparkId, reasonId)
+        mockMvc.perform(put("/sparks/{sparkId}/reasons/{reasonId}", sparkId, missingReasonId.toHexString())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isNotFound())
@@ -217,11 +236,11 @@ class ReasonControllerTest {
     void deleteReason_returns204_onSuccess() throws Exception {
 
         String sparkId = "spark-1";
-        String reasonId = "reason-1";
+        ObjectId reasonId = new ObjectId();
 
         doNothing().when(reasonService).deleteReason(sparkId, reasonId);
 
-        mockMvc.perform(delete("/sparks/{sparkId}/reasons/{reasonId}", sparkId, reasonId))
+        mockMvc.perform(delete("/sparks/{sparkId}/reasons/{reasonId}", sparkId, reasonId.toHexString()))
                 .andExpect(status().isNoContent());
 
         verify(reasonService).deleteReason(sparkId, reasonId);
@@ -231,20 +250,21 @@ class ReasonControllerTest {
     void deleteReason_returns404_whenMissing() throws Exception {
 
         String sparkId = "spark-1";
-        String reasonId = "missing";
+        ObjectId missingReasonId = new ObjectId("000000000000000000000001");
 
-        doThrow(new ReasonNotFoundException(reasonId))
+
+        doThrow(new ReasonNotFoundException(missingReasonId))
                 .when(reasonService)
-                .deleteReason(sparkId, reasonId);
+                .deleteReason(sparkId, missingReasonId);
 
-        mockMvc.perform(delete("/sparks/{sparkId}/reasons/{reasonId}", sparkId, reasonId)
+        mockMvc.perform(delete("/sparks/{sparkId}/reasons/{reasonId}", sparkId, missingReasonId.toHexString())
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.code", is("REASON_NOT_FOUND")))
                 .andExpect(jsonPath("$.status", is(404)));
 
-        verify(reasonService).deleteReason(sparkId, reasonId);
+        verify(reasonService).deleteReason(sparkId, missingReasonId);
     }
 
     @Test
@@ -266,7 +286,7 @@ class ReasonControllerTest {
         String sparkId = "spark-1";
         CreateReasonRequestDTO request = new CreateReasonRequestDTO("Duplicate", ReasonType.GOOD);
 
-        when(reasonService.createReason(eq(sparkId), any(CreateReasonRequestDTO.class)))
+        when(reasonService.createReason(eq(sparkId), any(String.class), any(ReasonType.class)))
                 .thenThrow(new ReasonAlreadyExistsException("Duplicate"));
 
         mockMvc.perform(post("/sparks/{sparkId}/reasons", sparkId)
@@ -282,28 +302,18 @@ class ReasonControllerTest {
     void updateReason_returns409_whenContentDuplicate() throws Exception {
 
         String sparkId = "spark-1";
-        String reasonId = "reason-1";
+        ObjectId reasonId = new ObjectId();
         UpdateReasonRequestDTO request = new UpdateReasonRequestDTO("Duplicate", ReasonType.GOOD);
 
-        when(reasonService.updateReason(eq(sparkId), eq(reasonId), any(UpdateReasonRequestDTO.class)))
+        when(reasonService.updateReason(eq(sparkId), eq(reasonId), any(String.class), any(ReasonType.class)))
                 .thenThrow(new ReasonAlreadyExistsException("Duplicate"));
 
-        mockMvc.perform(put("/sparks/{sparkId}/reasons/{reasonId}", sparkId, reasonId)
+        mockMvc.perform(put("/sparks/{sparkId}/reasons/{reasonId}", sparkId, reasonId.toHexString())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isConflict())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.code", is("REASON_ALREADY_EXISTS")))
                 .andExpect(jsonPath("$.status", is(409)));
-    }
-
-    private Reason buildReason(String id, ReasonType type, String content) {
-        Reason reason = new Reason();
-        reason.setId(id);
-        reason.setType(type);
-        reason.setContent(content);
-        reason.setCreatedAt(Instant.now());
-        reason.setUpdatedAt(Instant.now());
-        return reason;
     }
 }

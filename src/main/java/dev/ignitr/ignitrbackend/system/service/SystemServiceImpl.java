@@ -11,7 +11,7 @@ public class SystemServiceImpl implements SystemService {
     private static final Logger logger = LoggerFactory.getLogger(SystemServiceImpl.class);
 
     public String isOk() {
-        LoggingUtils.info(logger, "isOk", null, "Health check OK.");
+        LoggingUtils.info(logger, "isOk", "", "Health check OK.");
         return "OK";
     }
 }

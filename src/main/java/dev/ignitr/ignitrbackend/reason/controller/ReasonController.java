@@ -6,13 +6,17 @@ import dev.ignitr.ignitrbackend.reason.dto.ReasonDTO;
 import dev.ignitr.ignitrbackend.reason.dto.UpdateReasonRequestDTO;
 import dev.ignitr.ignitrbackend.reason.mapper.ReasonMapper;
 import dev.ignitr.ignitrbackend.reason.model.Reason;
+import dev.ignitr.ignitrbackend.reason.model.ReasonType;
 import dev.ignitr.ignitrbackend.reason.service.ReasonService;
 import jakarta.validation.Valid;
+import org.bson.types.ObjectId;
 import org.springframework.data.domain.Page;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+
+import static dev.ignitr.ignitrbackend.common.utils.StringUtils.isValidObjectId;
 
 @RestController
 @RequestMapping("/sparks/{sparkId}/reasons")
@@ -30,7 +34,8 @@ public class ReasonController {
             produces = MediaType.APPLICATION_JSON_VALUE
     )
     public ResponseEntity<ReasonDTO> createReason(@PathVariable String sparkId, @Valid @RequestBody CreateReasonRequestDTO dto) {
-        Reason newReason = reasonService.createReason(sparkId, dto);
+
+        Reason newReason = reasonService.createReason(sparkId, dto.content(), dto.type());
         ReasonDTO response = ReasonMapper.toDto(newReason);
         return ResponseEntity.status(201).body(response);
     }
@@ -40,7 +45,10 @@ public class ReasonController {
             produces = MediaType.APPLICATION_JSON_VALUE
     )
     public ResponseEntity<ReasonDTO> getReasonById(@PathVariable String sparkId, @PathVariable String reasonId) {
-        Reason reason = reasonService.getReasonById(sparkId, reasonId);
+        if(!isValidObjectId(reasonId)) {
+            throw new IllegalArgumentException("Invalid reason ID format.");
+        }
+        Reason reason = reasonService.getReasonById(sparkId, new ObjectId(reasonId));
         ReasonDTO response = ReasonMapper.toDto(reason);
         return ResponseEntity.ok(response);
     }
@@ -54,7 +62,8 @@ public class ReasonController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
-        Page<Reason> reasonsPage = reasonService.getReasonsBySparkId(sparkId, type, page, size);
+        ReasonType reasonType = type != null ? ReasonType.fromValue(type) : null;
+        Page<Reason> reasonsPage = reasonService.getReasonsBySparkId(sparkId, reasonType, page, size);
         Page<ReasonDTO> dtoPage = reasonsPage.map(ReasonMapper::toDto);
         PagedResponse<ReasonDTO> response = new PagedResponse<>(
                 dtoPage.getContent(),
@@ -76,7 +85,10 @@ public class ReasonController {
             @PathVariable String reasonId,
             @Valid @RequestBody UpdateReasonRequestDTO dto
     ) {
-        Reason updatedReason = reasonService.updateReason(sparkId, reasonId, dto);
+        if(!isValidObjectId(reasonId)) {
+            throw new IllegalArgumentException("Invalid reason ID format.");
+        }
+        Reason updatedReason = reasonService.updateReason(sparkId, new ObjectId(reasonId), dto.content(), dto.type());
         ReasonDTO response = ReasonMapper.toDto(updatedReason);
         return ResponseEntity.ok(response);
     }
@@ -86,7 +98,10 @@ public class ReasonController {
             @PathVariable String sparkId,
             @PathVariable String reasonId
     ) {
-        reasonService.deleteReason(sparkId, reasonId);
+        if(!isValidObjectId(reasonId)) {
+            throw new IllegalArgumentException("Invalid reason ID format.");
+        }
+        reasonService.deleteReason(sparkId, new ObjectId(reasonId));
         return ResponseEntity.noContent().build();
     }
 

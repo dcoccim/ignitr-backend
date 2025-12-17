@@ -1,13 +1,12 @@
 package dev.ignitr.ignitrbackend.reason.service;
 
-import dev.ignitr.ignitrbackend.reason.dto.CreateReasonRequestDTO;
-import dev.ignitr.ignitrbackend.reason.dto.UpdateReasonRequestDTO;
 import dev.ignitr.ignitrbackend.reason.exception.ReasonAlreadyExistsException;
 import dev.ignitr.ignitrbackend.reason.exception.ReasonNotFoundException;
 import dev.ignitr.ignitrbackend.reason.model.Reason;
 import dev.ignitr.ignitrbackend.reason.model.ReasonType;
 import dev.ignitr.ignitrbackend.spark.model.Spark;
 import dev.ignitr.ignitrbackend.spark.service.SparkService;
+import org.bson.types.ObjectId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -35,21 +34,43 @@ class ReasonServiceImplTest {
         reasonService = new ReasonServiceImpl(sparkService);
     }
 
+    private Spark buildSpark(String id) {
+        Spark spark = new Spark();
+        spark.setId(id);
+        spark.setTitle("Title " + id);
+        spark.setDescription("Description " + id);
+        spark.setReasons(new ArrayList<>());
+        spark.setCreatedAt(Instant.now());
+        spark.setUpdatedAt(Instant.now());
+        return spark;
+    }
+
+    private Reason buildReason(ObjectId id, ReasonType type, String content) {
+        Reason reason = new Reason();
+        reason.setId(id);
+        reason.setType(type);
+        reason.setContent(content);
+        reason.setCreatedAt(Instant.now());
+        reason.setUpdatedAt(Instant.now());
+        return reason;
+    }
+
     @Test
     void createReason_returnsSavedReason_whenSparkExists() {
 
         String sparkId = "spark-1";
-        CreateReasonRequestDTO dto = new CreateReasonRequestDTO("Great work", ReasonType.GOOD);
+        String content = "Great work";
+        ReasonType type = ReasonType.GOOD;
 
         Spark spark = buildSpark(sparkId);
 
         when(sparkService.getSparkById(sparkId)).thenReturn(spark);
         when(sparkService.saveSpark(any(Spark.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        Reason result = reasonService.createReason(sparkId, dto);
+        Reason result = reasonService.createReason(sparkId, content, type);
 
-        assertThat(result.getContent()).isEqualTo(dto.content());
-        assertThat(result.getType()).isEqualTo(dto.type());
+        assertThat(result.getContent()).isEqualTo(content);
+        assertThat(result.getType()).isEqualTo(type);
         assertThat(spark.getReasons()).hasSize(1);
 
         verify(sparkService).getSparkById(sparkId);
@@ -60,14 +81,15 @@ class ReasonServiceImplTest {
     void getReasonById_returnsReason_whenFound() {
 
         String sparkId = "spark-1";
-        Reason reason = buildReason("reason-1", ReasonType.GOOD, "Content");
+        ObjectId reasonId = new ObjectId();
+        Reason reason = buildReason(reasonId, ReasonType.GOOD, "Content");
 
         Spark spark = buildSpark(sparkId);
         spark.getReasons().add(reason);
 
         when(sparkService.getSparkById(sparkId)).thenReturn(spark);
 
-        Reason result = reasonService.getReasonById(sparkId, reason.getId());
+        Reason result = reasonService.getReasonById(sparkId, reasonId);
 
         assertThat(result).isEqualTo(reason);
         verify(sparkService).getSparkById(sparkId);
@@ -81,9 +103,11 @@ class ReasonServiceImplTest {
 
         when(sparkService.getSparkById(sparkId)).thenReturn(spark);
 
-        assertThatThrownBy(() -> reasonService.getReasonById(sparkId, "missing"))
+        ObjectId missingReasonId = new ObjectId("000000000000000000000001");
+
+        assertThatThrownBy(() -> reasonService.getReasonById(sparkId, missingReasonId))
                 .isInstanceOf(ReasonNotFoundException.class)
-                .hasMessageContaining("missing");
+                .hasMessageContaining(missingReasonId.toHexString());
 
         verify(sparkService).getSparkById(sparkId);
     }
@@ -92,19 +116,23 @@ class ReasonServiceImplTest {
     void getReasonsBySparkId_filtersAndPaginates() {
 
         String sparkId = "spark-1";
-        Reason r1 = buildReason("r1", ReasonType.GOOD, "Nice");
-        Reason r2 = buildReason("r2", ReasonType.BAD, "Needs work");
-        Reason r3 = buildReason("r3", ReasonType.GOOD, "Awesome");
+        Reason goodReason1 = buildReason(new ObjectId(), ReasonType.GOOD, "Nice");
+        Reason goodReason2 = buildReason(new ObjectId(), ReasonType.GOOD, "Awesome");
+        Reason badReason1 = buildReason(new ObjectId(), ReasonType.BAD, "Needs work");
 
         Spark spark = buildSpark(sparkId);
-        spark.getReasons().addAll(List.of(r1, r2, r3));
+        spark.getReasons().addAll(List.of(
+                goodReason1,
+                goodReason2,
+                badReason1
+        ));
 
         when(sparkService.getSparkById(sparkId)).thenReturn(spark);
 
-        var page = reasonService.getReasonsBySparkId(sparkId, "GOOD", 0, 2);
+        var page = reasonService.getReasonsBySparkId(sparkId, ReasonType.GOOD, 0, 2);
 
         assertThat(page.getTotalElements()).isEqualTo(2);
-        assertThat(page.getContent()).containsExactly(r1, r3);
+        assertThat(page.getContent()).containsExactly(goodReason1, goodReason2);
 
         verify(sparkService).getSparkById(sparkId);
     }
@@ -113,21 +141,22 @@ class ReasonServiceImplTest {
     void updateReason_updatesReason_whenPresent() {
 
         String sparkId = "spark-1";
-        String reasonId = "reason-1";
+        ObjectId reasonId = new ObjectId();
         Reason existing = buildReason(reasonId, ReasonType.BAD, "Old");
 
         Spark spark = buildSpark(sparkId);
         spark.getReasons().add(existing);
 
-        UpdateReasonRequestDTO dto = new UpdateReasonRequestDTO("New content", ReasonType.GOOD);
+        String newContent = "New content";
+        ReasonType newType = ReasonType.GOOD;
 
         when(sparkService.getSparkById(sparkId)).thenReturn(spark);
         when(sparkService.saveSpark(any(Spark.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        Reason result = reasonService.updateReason(sparkId, reasonId, dto);
+        Reason result = reasonService.updateReason(sparkId, reasonId, newContent, newType);
 
-        assertThat(result.getContent()).isEqualTo(dto.content());
-        assertThat(result.getType()).isEqualTo(dto.type());
+        assertThat(result.getContent()).isEqualTo(newContent);
+        assertThat(result.getType()).isEqualTo(newType);
         verify(sparkService).saveSpark(spark);
     }
 
@@ -139,11 +168,11 @@ class ReasonServiceImplTest {
 
         when(sparkService.getSparkById(sparkId)).thenReturn(spark);
 
-        UpdateReasonRequestDTO dto = new UpdateReasonRequestDTO("Content", ReasonType.GOOD);
+        ObjectId missingReasonId = new ObjectId("000000000000000000000002");
 
-        assertThatThrownBy(() -> reasonService.updateReason(sparkId, "missing", dto))
+        assertThatThrownBy(() -> reasonService.updateReason(sparkId, missingReasonId, "Content", ReasonType.GOOD))
                 .isInstanceOf(ReasonNotFoundException.class)
-                .hasMessageContaining("missing");
+                .hasMessageContaining(missingReasonId.toHexString());
 
         verify(sparkService, never()).saveSpark(any(Spark.class));
     }
@@ -152,7 +181,7 @@ class ReasonServiceImplTest {
     void deleteReason_removesReason_whenPresent() {
 
         String sparkId = "spark-1";
-        String reasonId = "reason-1";
+        ObjectId reasonId = new ObjectId();
         Reason reason = buildReason(reasonId, ReasonType.BAD, "Content");
 
         Spark spark = buildSpark(sparkId);
@@ -174,9 +203,11 @@ class ReasonServiceImplTest {
 
         when(sparkService.getSparkById(sparkId)).thenReturn(spark);
 
-        assertThatThrownBy(() -> reasonService.deleteReason(sparkId, "missing"))
+        ObjectId missingReasonId = new ObjectId("000000000000000000000003");
+
+        assertThatThrownBy(() -> reasonService.deleteReason(sparkId, missingReasonId))
                 .isInstanceOf(ReasonNotFoundException.class)
-                .hasMessageContaining("missing");
+                .hasMessageContaining(missingReasonId.toHexString());
 
         verify(sparkService, never()).saveSpark(any(Spark.class));
     }
@@ -187,8 +218,8 @@ class ReasonServiceImplTest {
         String sparkId = "spark-1";
         Spark spark = buildSpark(sparkId);
         spark.getReasons().addAll(List.of(
-                buildReason("r1", ReasonType.GOOD, "Nice"),
-                buildReason("r2", ReasonType.BAD, "Bad")
+                buildReason(new ObjectId(), ReasonType.GOOD, "Nice"),
+                buildReason(new ObjectId(), ReasonType.BAD, "Bad")
         ));
 
         when(sparkService.getSparkById(sparkId)).thenReturn(spark);
@@ -203,16 +234,17 @@ class ReasonServiceImplTest {
     void createReason_throwsWhenContentAlreadyExists() {
 
         String sparkId = "spark-1";
-        Reason existing = buildReason("reason-1", ReasonType.GOOD, "Duplicate");
+        Reason existing = buildReason(new ObjectId(), ReasonType.GOOD, "Duplicate");
 
         Spark spark = buildSpark(sparkId);
         spark.getReasons().add(existing);
 
         when(sparkService.getSparkById(sparkId)).thenReturn(spark);
 
-        CreateReasonRequestDTO dto = new CreateReasonRequestDTO("Duplicate", ReasonType.BAD);
+        String duplicateContent = "Duplicate";
+        ReasonType badType = ReasonType.BAD;
 
-        assertThatThrownBy(() -> reasonService.createReason(sparkId, dto))
+        assertThatThrownBy(() -> reasonService.createReason(sparkId, duplicateContent, badType))
                 .isInstanceOf(ReasonAlreadyExistsException.class)
                 .hasMessageContaining("Duplicate");
 
@@ -223,43 +255,25 @@ class ReasonServiceImplTest {
     void updateReason_throwsWhenContentAlreadyExists() {
 
         String sparkId = "spark-1";
-        String reasonId = "reason-1";
+        ObjectId reason1Id = new ObjectId();
+        ObjectId reason2Id = new ObjectId();
 
-        Reason existing = buildReason(reasonId, ReasonType.GOOD, "Original");
-        Reason duplicate = buildReason("reason-2", ReasonType.BAD, "Conflict");
+        String duplicateContent = "Conflict";
+
+        Reason existing = buildReason(reason1Id, ReasonType.GOOD, "Original");
+        Reason duplicate = buildReason(reason2Id, ReasonType.BAD, duplicateContent);
 
         Spark spark = buildSpark(sparkId);
         spark.getReasons().addAll(List.of(existing, duplicate));
 
         when(sparkService.getSparkById(sparkId)).thenReturn(spark);
 
-        UpdateReasonRequestDTO dto = new UpdateReasonRequestDTO("Conflict", ReasonType.GOOD);
+        ReasonType badType = ReasonType.BAD;
 
-        assertThatThrownBy(() -> reasonService.updateReason(sparkId, reasonId, dto))
+        assertThatThrownBy(() -> reasonService.updateReason(sparkId, reason1Id, duplicateContent, badType))
                 .isInstanceOf(ReasonAlreadyExistsException.class)
                 .hasMessageContaining("Conflict");
 
         verify(sparkService, never()).saveSpark(any(Spark.class));
-    }
-
-    private Spark buildSpark(String id) {
-        Spark spark = new Spark();
-        spark.setId(id);
-        spark.setTitle("Title " + id);
-        spark.setDescription("Description " + id);
-        spark.setReasons(new ArrayList<>());
-        spark.setCreatedAt(Instant.now());
-        spark.setUpdatedAt(Instant.now());
-        return spark;
-    }
-
-    private Reason buildReason(String id, ReasonType type, String content) {
-        Reason reason = new Reason();
-        reason.setId(id);
-        reason.setType(type);
-        reason.setContent(content);
-        reason.setCreatedAt(Instant.now());
-        reason.setUpdatedAt(Instant.now());
-        return reason;
     }
 }

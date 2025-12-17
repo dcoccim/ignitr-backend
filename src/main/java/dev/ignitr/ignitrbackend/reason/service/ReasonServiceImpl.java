@@ -1,13 +1,13 @@
 package dev.ignitr.ignitrbackend.reason.service;
 
-import dev.ignitr.ignitrbackend.reason.dto.CreateReasonRequestDTO;
-import dev.ignitr.ignitrbackend.reason.dto.UpdateReasonRequestDTO;
 import dev.ignitr.ignitrbackend.reason.exception.ReasonAlreadyExistsException;
 import dev.ignitr.ignitrbackend.reason.exception.ReasonNotFoundException;
 import dev.ignitr.ignitrbackend.reason.mapper.ReasonMapper;
 import dev.ignitr.ignitrbackend.reason.model.Reason;
+import dev.ignitr.ignitrbackend.reason.model.ReasonType;
 import dev.ignitr.ignitrbackend.spark.model.Spark;
 import dev.ignitr.ignitrbackend.spark.service.SparkService;
+import org.bson.types.ObjectId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
@@ -40,13 +40,25 @@ public class ReasonServiceImpl implements ReasonService {
         }
     }
 
+    private Reason getReasonFromSparkById(Spark spark, ObjectId reasonId, String operation) {
+
+        return spark.getReasons().stream()
+                .filter(r -> r.getId().equals(reasonId))
+                .findFirst()
+                .orElseThrow(() -> {
+                    ReasonNotFoundException exception = new ReasonNotFoundException(reasonId);
+                    warn(logger, operation, reasonId, "Reason not found.", exception);
+                    return exception;
+                });
+    }
+
     @Override
-    public Reason createReason(String sparkId, CreateReasonRequestDTO dto) {
+    public Reason createReason(String sparkId, String content, ReasonType type) {
 
         debug(logger, "createReason", sparkId, "Creating Reason...");
 
         Instant now = Instant.now();
-        Reason newReason = ReasonMapper.toNewEntity(dto, now);
+        Reason newReason = ReasonMapper.toNewEntity(content, type, now);
 
         Spark existingSpark = sparkService.getSparkById(sparkId);
 
@@ -58,31 +70,25 @@ public class ReasonServiceImpl implements ReasonService {
 
         Reason savedReason = savedSpark.getReasons().getLast();
 
-        info(logger, "createReason", savedReason.getId(), "Reason created successfully.");
+        info(logger, "createReason", savedReason.getId(),
+                "Reason created successfully.");
 
         return savedReason;
     }
 
     @Override
-    public Reason getReasonById(String sparkId, String reasonId) {
+    public Reason getReasonById(String sparkId, ObjectId reasonId) {
         debug(logger, "getReasonById", reasonId, "Fetching Reason by ID...");
         Spark spark = sparkService.getSparkById(sparkId);
-        Reason reason = spark.getReasons().stream()
-                .filter(r -> r.getId().equals(reasonId))
-                .findFirst()
-                .orElseThrow(() -> {
-                    ReasonNotFoundException exception = new ReasonNotFoundException(reasonId);
-                    warn(logger, "getReasonById", reasonId, "Reason not found.", exception);
-                    return exception;
-                });
+        Reason reason = getReasonFromSparkById(spark, reasonId, "getReasonById");
         info(logger, "getReasonById", reasonId, "Reason fetched successfully.");
         return reason;
     }
 
     @Override
-    public Page<Reason> getReasonsBySparkId(String sparkId, String type, int page, int size) {
+    public Page<Reason> getReasonsBySparkId(String sparkId, ReasonType type, int page, int size) {
         debug(logger, "getReasonsBySparkId", sparkId,
-                "Fetching {} Reasons for spark...", type != null ? type : "all");
+                "Fetching {} Reasons for spark...", type != null ? type.getValue() : "all");
         Spark existingSpark = sparkService.getSparkById(sparkId);
         Page<Reason> reasonsPage = ReasonMapper.filterAndPaginateReasons(existingSpark.getReasons(), type, page, size);
         info(logger, "getReasonsBySparkId", sparkId,
@@ -91,35 +97,21 @@ public class ReasonServiceImpl implements ReasonService {
     }
 
     @Override
-    public Reason updateReason(String sparkId, String reasonId, UpdateReasonRequestDTO dto) {
+    public Reason updateReason(String sparkId, ObjectId reasonId, String content, ReasonType type) {
         debug(logger, "updateReason", reasonId, "Updating Reason...");
 
         Spark existingSpark = sparkService.getSparkById(sparkId);
 
-        checkUniqueReasonContent(existingSpark, dto.content(), "updateReason");
+        checkUniqueReasonContent(existingSpark, content, "updateReason");
 
-        Reason reason = existingSpark.getReasons().stream()
-                .filter(r -> r.getId().equals(reasonId))
-                .findFirst()
-                .orElseThrow(() -> {
-                    ReasonNotFoundException exception = new ReasonNotFoundException(reasonId);
-                    warn(logger, "updateReason", reasonId, "Reason not found.", exception);
-                    return exception;
-                });
+        Reason reason = getReasonFromSparkById(existingSpark, reasonId, "updateReason");
 
         Instant now = Instant.now();
-        ReasonMapper.updateEntity(dto, reason, now);
+        ReasonMapper.updateEntity(content, type, reason, now);
 
         Spark savedSpark = sparkService.saveSpark(existingSpark);
 
-        Reason updatedReason = savedSpark.getReasons().stream()
-                .filter(r -> r.getId().equals(reasonId))
-                .findFirst()
-                .orElseThrow(() -> {
-                    ReasonNotFoundException exception = new ReasonNotFoundException(reasonId);
-                    warn(logger, "updateReason", reasonId, "Reason not found after update.", exception);
-                    return exception;
-                });
+        Reason updatedReason = getReasonFromSparkById(savedSpark, reasonId, "updateReason");
 
         info(logger, "updateReason", reasonId, "Reason updated successfully.");
 
@@ -127,7 +119,7 @@ public class ReasonServiceImpl implements ReasonService {
     }
 
     @Override
-    public void deleteReason(String sparkId, String reasonId) {
+    public void deleteReason(String sparkId, ObjectId reasonId) {
 
         debug(logger, "deleteReason", reasonId, "Deleting Reason...");
 

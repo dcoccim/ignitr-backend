@@ -1,0 +1,18 @@
+logging:
+  level:
+    root: INFO
+    dev:
+      ignitr:
+        ignitrbackend: DEBUG
+spring:
+  mongodb:
+    uri: mongodb://localhost:27017/ignitr
+  doc:
+    swagger-ui:
+      url: /openapi/ignitr.yaml
+server:
+  port: 8080
+ignitr:
+  scorer:
+    url: http://localhost:3000/api
+

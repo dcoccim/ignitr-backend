@@ -2,6 +2,7 @@ package dev.ignitr.ignitrbackend.score.client;
 
 import dev.ignitr.ignitrbackend.score.dto.SparkScoreRequestDTO;
 import dev.ignitr.ignitrbackend.score.dto.SparkTreeScoreResponseDTO;
+import dev.ignitr.ignitrbackend.score.exception.ScoringException;
 import dev.ignitr.ignitrbackend.score.mapper.SparkScoreMapper;
 import dev.ignitr.ignitrbackend.score.tree.ScoredSparkTree;
 import dev.ignitr.ignitrbackend.spark.model.Spark;
@@ -25,13 +26,17 @@ public class ScoringServiceClient {
             Map<ObjectId, Spark> sparkMap,
             ObjectId rootId
     ) {
-        Map<String, SparkScoreRequestDTO> request = SparkScoreMapper.toDtoMap(sparkMap);
-        SparkTreeScoreResponseDTO response = scoringRestClient
-                .post()
-                .uri("/score/{rootId}", rootId.toHexString())
-                .body(request)
-                .retrieve()
-                .body(SparkTreeScoreResponseDTO.class);
-        return SparkScoreMapper.toScoredSparkTree(sparkMap, response);
+        try {
+            Map<String, SparkScoreRequestDTO> request = SparkScoreMapper.toDtoMap(sparkMap);
+            SparkTreeScoreResponseDTO response = scoringRestClient
+                    .post()
+                    .uri("/score/{rootId}", rootId.toHexString())
+                    .body(request)
+                    .retrieve()
+                    .body(SparkTreeScoreResponseDTO.class);
+            return SparkScoreMapper.toScoredSparkTree(sparkMap, response);
+        } catch (Exception e) {
+            throw new ScoringException(rootId);
+        }
     }
 }

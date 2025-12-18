@@ -1,5 +1,6 @@
 package dev.ignitr.ignitrbackend.spark.service;
 
+import dev.ignitr.ignitrbackend.score.exception.ScoringException;
 import dev.ignitr.ignitrbackend.score.service.SparkScoreService;
 import dev.ignitr.ignitrbackend.spark.exception.SparkAlreadyExistsException;
 import dev.ignitr.ignitrbackend.spark.exception.SparkNotFoundException;
@@ -262,7 +263,7 @@ class SparkServiceImplTest {
 
 
     @Test
-    void getSparkTreeList_returnsTreeList_whenRootExists() {
+    void getSparkTree_returnsTree_whenRootExists() {
 
         ObjectId rootId = new ObjectId();
         String rootTitle = "Root";
@@ -278,7 +279,7 @@ class SparkServiceImplTest {
         when(sparkRepository.findByParentId(rootId)).thenReturn(List.of(child1, child2));
         when(sparkRepository.findByParentId(child1Id)).thenReturn(List.of());
         when(sparkRepository.findByParentId(child2Id)).thenReturn(List.of());
-        when(sparkScoreService.scoreTree(any(ObjectId.class), anyMap())).thenThrow(new RuntimeException("scoring failed"));
+        when(sparkScoreService.scoreTree(any(ObjectId.class), anyMap())).thenThrow(new ScoringException(rootId));
 
         SparkTree result = sparkService.getSparkTree(rootId);
 
@@ -291,7 +292,7 @@ class SparkServiceImplTest {
     }
 
     @Test
-    void getSparkTreeList_returnsOneElement_whenNoChildren() {
+    void getSparkTree_returnsOneElement_whenNoChildren() {
 
         ObjectId rootId = new ObjectId();
         Instant now = Instant.now();
@@ -300,7 +301,7 @@ class SparkServiceImplTest {
 
         when(sparkRepository.findById(rootId)).thenReturn(Optional.of(root));
         when(sparkRepository.findByParentId(rootId)).thenReturn(List.of());
-        when(sparkScoreService.scoreTree(any(ObjectId.class), anyMap())).thenThrow(new RuntimeException("scoring failed"));
+        when(sparkScoreService.scoreTree(any(ObjectId.class), anyMap())).thenThrow(new ScoringException(rootId));
 
         SparkTree result = sparkService.getSparkTree(rootId);
 

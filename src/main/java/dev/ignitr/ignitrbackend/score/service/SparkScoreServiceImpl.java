@@ -26,14 +26,8 @@ public class SparkScoreServiceImpl implements SparkScoreService {
     public ScoredSparkTree scoreTree(ObjectId rootId,
                                       Map<ObjectId, Spark> sparkMap) {
         LoggingUtils.debug(logger, "scoreTree", rootId, "Scoring Spark tree...");
-        try{
-            ScoredSparkTree scoredTree = scoringServiceClient.postSparkTreeScore(sparkMap, rootId);
-            LoggingUtils.info(logger, "scoreTree", rootId, "Spark tree scored.");
-            return scoredTree;
-        } catch (Exception e) {
-            LoggingUtils.warn(logger, "scoreTree", rootId,
-                    "Failed to score Spark tree: {}", e.getMessage(), e);
-            throw e;
-        }
+        ScoredSparkTree scoredTree = scoringServiceClient.postSparkTreeScore(sparkMap, rootId);
+        LoggingUtils.info(logger, "scoreTree", rootId, "Spark tree scored.");
+        return scoredTree;
     }
 }

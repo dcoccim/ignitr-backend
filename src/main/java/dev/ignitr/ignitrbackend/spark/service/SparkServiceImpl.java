@@ -1,6 +1,7 @@
 package dev.ignitr.ignitrbackend.spark.service;
 
 import dev.ignitr.ignitrbackend.common.utils.LoggingUtils;
+import dev.ignitr.ignitrbackend.score.exception.ScoringException;
 import dev.ignitr.ignitrbackend.score.service.SparkScoreService;
 import dev.ignitr.ignitrbackend.spark.exception.SparkAlreadyExistsException;
 import dev.ignitr.ignitrbackend.spark.exception.SparkNotFoundException;
@@ -157,9 +158,9 @@ public class SparkServiceImpl implements SparkService {
 
         try {
             return sparkScoreService.scoreTree(root.getId(), sparkMap);
-        } catch (Exception e) {
-            LoggingUtils.error(logger, "getSparkTree", root.getId(), e,
-                    "Error scoring Spark tree, returning unscored tree.");
+        } catch (ScoringException e) {
+            LoggingUtils.warn(logger, "getSparkTree", root.getId(),
+                    "Error scoring Spark tree, returning unscored tree.", e);
             return SparkMapper.toSparkTree(sparkMap, root.getId());
         }
     }

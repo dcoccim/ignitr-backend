@@ -3,6 +3,7 @@ package dev.ignitr.ignitrbackend.spark.tree;
 import dev.ignitr.ignitrbackend.spark.model.Spark;
 import lombok.Getter;
 import lombok.Setter;
+import org.bson.types.ObjectId;
 
 import java.time.Instant;
 import java.util.List;
@@ -10,17 +11,17 @@ import java.util.List;
 @Getter
 @Setter
 public class SparkTree {
-    private String id;
+    private ObjectId id;
     private String title;
     private String description;
-    private String parentId;
+    private ObjectId parentId;
     private int goodReasonsCount;
     private int badReasonsCount;
     private List<SparkTree> children;
     private Instant createdAt;
     private Instant updatedAt;
 
-    public SparkTree(String id, String title, String description, String parentId,
+    public SparkTree(ObjectId id, String title, String description, ObjectId parentId,
                      int goodReasonsCount, int badReasonsCount, List<SparkTree> children,
                      Instant createdAt, Instant updatedAt) {
         this.id = id;

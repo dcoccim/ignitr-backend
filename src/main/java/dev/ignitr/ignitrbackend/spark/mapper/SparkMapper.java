@@ -5,6 +5,7 @@ import dev.ignitr.ignitrbackend.score.tree.ScoredSparkTree;
 import dev.ignitr.ignitrbackend.spark.dto.*;
 import dev.ignitr.ignitrbackend.spark.model.Spark;
 import dev.ignitr.ignitrbackend.spark.tree.SparkTree;
+import org.bson.types.ObjectId;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -14,11 +15,11 @@ public class SparkMapper {
 
     private SparkMapper() {}
 
-    public static Spark toNewEntity(CreateSparkRequestDTO dto, Instant now) {
+    public static Spark toNewEntity(String title, String description, Instant now) {
         return new Spark(
                 null,
-                dto.title(),
-                dto.description(),
+                title,
+                description,
                 null,
                 null,
                 now,
@@ -26,29 +27,32 @@ public class SparkMapper {
         );
     }
 
-    public static void updateEntity(Spark spark, UpdateSparkRequestDTO dto, Instant now) {
-        spark.setTitle(dto.title());
-        spark.setDescription(dto.description());
+    public static void updateEntity(Spark spark, String title, String description, Instant now) {
+        spark.setTitle(title);
+        spark.setDescription(description);
         spark.setUpdatedAt(now);
     }
 
-    public static void partialUpdateEntity(Spark spark, PatchSparkRequestDTO dto, Instant now) {
-        if (dto.title() != null) {
-            spark.setTitle(dto.title());
+    public static void partialUpdateEntity(Spark spark, String title, String description, Instant now) {
+        boolean updated = false;
+        if (title != null) {
+            updated = true;
+            spark.setTitle(title);
         }
-        if (dto.description() != null) {
-            spark.setDescription(dto.description());
+        if (description != null) {
+            updated = true;
+            spark.setDescription(description);
         }
-        if (dto.title() != null || dto.description() != null) {
+        if (updated) {
             spark.setUpdatedAt(now);
         }
     }
 
-    public static Spark toNewChildEntity(CreateSparkRequestDTO dto, String parentId, Instant now) {
+    public static Spark toNewChildEntity(String title, String description, ObjectId parentId, Instant now) {
         return new Spark(
                 null,
-                dto.title(),
-                dto.description(),
+                title,
+                description,
                 parentId,
                 null,
                 now,
@@ -58,7 +62,7 @@ public class SparkMapper {
 
     public static SparkDTO toSparkDto(Spark entity) {
         return new SparkDTO(
-                entity.getId(),
+                entity.getId().toHexString(),
                 entity.getTitle(),
                 entity.getDescription(),
                 null,
@@ -67,7 +71,7 @@ public class SparkMapper {
         );
     }
 
-    public static SparkTree toSparkTree(Map<String, Spark> sparkMap, String rootId) {
+    public static SparkTree toSparkTree(Map<ObjectId, Spark> sparkMap, ObjectId rootId) {
         Spark rootSpark = sparkMap.get(rootId);
         if (rootSpark == null) {
             return null;
@@ -86,7 +90,7 @@ public class SparkMapper {
         SparkTree rootNode = SparkTree.fromSpark(rootSpark, goodReasonsCount, badReasonsCount, new ArrayList<>());
 
         for (Spark spark : sparkMap.values()) {
-            String parentId = spark.getParentId();
+            ObjectId parentId = spark.getParentId();
             if (parentId != null && parentId.equals(rootId)) {
                 SparkTree childNode = toSparkTree(sparkMap, spark.getId());
                 if (childNode != null) {
@@ -108,7 +112,7 @@ public class SparkMapper {
         }
 
         SparkTreeDTO dto = new SparkTreeDTO(
-                sparkTree.getId(),
+                sparkTree.getId().toHexString(),
                 sparkTree.getTitle(),
                 sparkTree.getDescription(),
                 sparkTree.getGoodReasonsCount(),

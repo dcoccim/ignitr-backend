@@ -3,6 +3,7 @@ package dev.ignitr.ignitrbackend.spark.model;
 import dev.ignitr.ignitrbackend.reason.model.Reason;
 import lombok.Getter;
 import lombok.Setter;
+import org.bson.types.ObjectId;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
@@ -17,14 +18,14 @@ import java.util.List;
 public class Spark {
 
     @Id
-    private String id;
+    private ObjectId id;
 
     @Indexed(unique = true)
     private String title;
 
     private String description;
 
-    private String parentId;
+    private ObjectId parentId;
 
     private List<Reason> reasons = new ArrayList<>();
 
@@ -34,7 +35,7 @@ public class Spark {
 
     public Spark() {}
 
-    public Spark(String id, String title, String description, String parentId, List<Reason> reasons, Instant createdAt, Instant updatedAt) {
+    public Spark(ObjectId id, String title, String description, ObjectId parentId, List<Reason> reasons, Instant createdAt, Instant updatedAt) {
         this.id = id;
         this.title = title;
         this.description = description;

@@ -1,10 +1,9 @@
 package dev.ignitr.ignitrbackend.spark.service;
 
-import dev.ignitr.ignitrbackend.spark.dto.*;
 import dev.ignitr.ignitrbackend.spark.exception.SparkNotFoundException;
 import dev.ignitr.ignitrbackend.spark.model.Spark;
-import dev.ignitr.ignitrbackend.spark.model.SparkDeleteMode;
 import dev.ignitr.ignitrbackend.spark.tree.SparkTree;
+import org.bson.types.ObjectId;
 import org.springframework.data.domain.Page;
 
 import java.util.List;
@@ -13,21 +12,21 @@ public interface SparkService {
 
     Spark saveSpark(Spark spark);
 
-    Spark createSpark(CreateSparkRequestDTO dto);
+    Spark createSpark(String title, String description);
 
-    Spark createChildSpark(String parentId, CreateSparkRequestDTO dto);
+    Spark createChildSpark(ObjectId parentId, String title, String description);
 
-    Spark getSparkById(String id) throws SparkNotFoundException;
+    Spark getSparkById(ObjectId id) throws SparkNotFoundException;
 
-    List<Spark> getChildren(String parentId);
+    List<Spark> getChildren(ObjectId parentId);
 
-    SparkTree getSparkTree(String rootId);
+    SparkTree getSparkTree(ObjectId rootId);
 
-    Spark updateSpark(String id, UpdateSparkRequestDTO dto);
+    Spark updateSpark(ObjectId id, String title, String description);
 
-    Spark partialUpdateSpark(String id, PatchSparkRequestDTO dto);
+    Spark partialUpdateSpark(ObjectId id, String title, String description);
 
-    void deleteSpark(String id, SparkDeleteMode mode);
+    void deleteSpark(ObjectId id, SparkDeleteMode mode);
 
-    Page<Spark> searchSparks(String title, String parentId, int page, int size);
+    Page<Spark> searchSparks(String title, ParentSearchScope scope, ObjectId parentId, int page, int size);
 }

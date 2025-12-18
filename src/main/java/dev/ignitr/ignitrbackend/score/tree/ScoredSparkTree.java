@@ -4,6 +4,7 @@ import dev.ignitr.ignitrbackend.spark.model.Spark;
 import dev.ignitr.ignitrbackend.spark.tree.SparkTree;
 import lombok.Getter;
 import lombok.Setter;
+import org.bson.types.ObjectId;
 
 import java.time.Instant;
 import java.util.List;
@@ -14,7 +15,7 @@ public class ScoredSparkTree extends SparkTree {
 
     private int score;
 
-    public ScoredSparkTree(String id, String title, String description, String parentId,
+    public ScoredSparkTree(ObjectId id, String title, String description, ObjectId parentId,
                            int goodReasonsCount, int badReasonsCount, List<SparkTree> children,
                            Instant createdAt, Instant updatedAt, int score) {
         super(id, title, description, parentId, goodReasonsCount, badReasonsCount, children, createdAt, updatedAt);

@@ -5,6 +5,7 @@ import dev.ignitr.ignitrbackend.score.dto.SparkScoreRequestDTO;
 import dev.ignitr.ignitrbackend.score.dto.SparkTreeScoreResponseDTO;
 import dev.ignitr.ignitrbackend.score.tree.ScoredSparkTree;
 import dev.ignitr.ignitrbackend.spark.model.Spark;
+import org.bson.types.ObjectId;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -15,11 +16,11 @@ public class SparkScoreMapper {
 
     private SparkScoreMapper() {}
 
-    public static Map<String, SparkScoreRequestDTO> toDtoMap(Map<String, Spark> sparkMap) {
+    public static Map<String, SparkScoreRequestDTO> toDtoMap(Map<ObjectId, Spark> sparkMap) {
         return sparkMap.entrySet().stream()
                 .filter(e -> e.getValue() != null)
                 .collect(Collectors.toMap(
-                        Map.Entry::getKey,
+                        e -> e.getKey().toHexString(),
                         e -> {
                             Spark s = e.getValue();
                             List<SparkScoreRequestDTO.ReasonScoreRequestDTO> reasonsDtoList =
@@ -28,19 +29,19 @@ public class SparkScoreMapper {
                                             .map(r -> new SparkScoreRequestDTO.ReasonScoreRequestDTO(r.getType(), r.getVotes()))
                                             .toList()
                                             : new ArrayList<>();
-                            String id = s.getId() != null ? s.getId() : e.getKey();
-                            return new SparkScoreRequestDTO(id, s.getParentId(), reasonsDtoList, s.getCreatedAt());
+                            String id = s.getId() != null ? s.getId().toHexString() : e.getKey().toHexString();
+                            return new SparkScoreRequestDTO(id, s.getParentId().toHexString(), reasonsDtoList, s.getCreatedAt());
                         }
                 ));
     }
 
-    public static ScoredSparkTree toScoredSparkTree(Map<String, Spark> sparkMap, SparkTreeScoreResponseDTO dto) {
+    public static ScoredSparkTree toScoredSparkTree(Map<ObjectId, Spark> sparkMap, SparkTreeScoreResponseDTO dto) {
         return mapNode(sparkMap, dto);
     }
 
-    private static ScoredSparkTree mapNode(Map<String, Spark> sparkMap, SparkTreeScoreResponseDTO dto) {
+    private static ScoredSparkTree mapNode(Map<ObjectId, Spark> sparkMap, SparkTreeScoreResponseDTO dto) {
 
-        Spark spark = sparkMap.get(dto.id());
+        Spark spark = sparkMap.get(new ObjectId(dto.id()));
 
         if(spark == null) {
             throw new IllegalArgumentException("Spark not found for id: " + dto.id());

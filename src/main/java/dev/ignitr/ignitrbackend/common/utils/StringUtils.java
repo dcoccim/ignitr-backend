@@ -10,7 +10,7 @@ public class StringUtils {
         return str != null && !str.isEmpty();
     }
 
-    public static boolean isValidObjectId(String id) {
-        return ObjectId.isValid(id);
+    public static boolean isInvalidObjectId(String id) {
+        return !ObjectId.isValid(id);
     }
 }

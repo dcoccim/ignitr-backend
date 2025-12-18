@@ -57,14 +57,14 @@ class ReasonControllerTest {
     @Test
     void createReason_returns201AndBody_onSuccess() throws Exception {
 
-        String sparkId = "spark-1";
+        ObjectId sparkId = new ObjectId();
         CreateReasonRequestDTO request = new CreateReasonRequestDTO("Great job", ReasonType.GOOD);
         Reason savedReason = buildReason(new ObjectId(), ReasonType.GOOD, "Great job");
 
         when(reasonService.createReason(eq(sparkId), any(String.class), any(ReasonType.class)))
                 .thenReturn(savedReason);
 
-        mockMvc.perform(post("/sparks/{sparkId}/reasons", sparkId)
+        mockMvc.perform(post("/sparks/{sparkId}/reasons", sparkId.toHexString())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
@@ -77,13 +77,13 @@ class ReasonControllerTest {
     @Test
     void createReason_returns404_whenSparkNotFound() throws Exception {
 
-        String sparkId = "missing-spark";
+        ObjectId missingSparkId = new ObjectId("000000000000000000000001");
         CreateReasonRequestDTO request = new CreateReasonRequestDTO("Insight", ReasonType.GOOD);
 
-        when(reasonService.createReason(eq(sparkId), any(String.class), any(ReasonType.class)))
-                .thenThrow(new SparkNotFoundException(sparkId));
+        when(reasonService.createReason(eq(missingSparkId), any(String.class), any(ReasonType.class)))
+                .thenThrow(new SparkNotFoundException(missingSparkId));
 
-        mockMvc.perform(post("/sparks/{sparkId}/reasons", sparkId)
+        mockMvc.perform(post("/sparks/{sparkId}/reasons", missingSparkId.toHexString())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isNotFound())
@@ -95,10 +95,10 @@ class ReasonControllerTest {
     @Test
     void createReason_returns400_onInvalidPayload() throws Exception {
 
-        String sparkId = "spark-1";
+        ObjectId sparkId = new ObjectId();
         CreateReasonRequestDTO request = new CreateReasonRequestDTO("", ReasonType.GOOD);
 
-        mockMvc.perform(post("/sparks/{sparkId}/reasons", sparkId)
+        mockMvc.perform(post("/sparks/{sparkId}/reasons", sparkId.toHexString())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
@@ -112,7 +112,7 @@ class ReasonControllerTest {
     @Test
     void getReasonById_returns200_onSuccess() throws Exception {
 
-        String sparkId = "spark-1";
+        ObjectId sparkId = new ObjectId();
         ObjectId reasonId = new ObjectId();
         ReasonType type = ReasonType.BAD;
         String content = "Could improve";
@@ -120,7 +120,7 @@ class ReasonControllerTest {
 
         when(reasonService.getReasonById(sparkId, reasonId)).thenReturn(reason);
 
-        mockMvc.perform(get("/sparks/{sparkId}/reasons/{reasonId}", sparkId, reasonId)
+        mockMvc.perform(get("/sparks/{sparkId}/reasons/{reasonId}", sparkId.toHexString(), reasonId.toHexString())
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -132,13 +132,13 @@ class ReasonControllerTest {
     @Test
     void getReasonById_returns404_whenMissing() throws Exception {
 
-        String sparkId = "spark-1";
+        ObjectId sparkId = new ObjectId();
         ObjectId missingReasonId = new ObjectId("000000000000000000000001");
 
         when(reasonService.getReasonById(sparkId, missingReasonId))
                 .thenThrow(new ReasonNotFoundException(missingReasonId));
 
-        mockMvc.perform(get("/sparks/{sparkId}/reasons/{reasonId}", sparkId, missingReasonId.toHexString())
+        mockMvc.perform(get("/sparks/{sparkId}/reasons/{reasonId}", sparkId.toHexString(), missingReasonId.toHexString())
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -149,7 +149,7 @@ class ReasonControllerTest {
     @Test
     void getReasonsBySparkId_returns200AndContent_onSuccess() throws Exception {
 
-        String sparkId = "spark-1";
+        ObjectId sparkId = new ObjectId();
         ObjectId reason1Id = new ObjectId();
         ObjectId reason2Id = new ObjectId();
         Reason reason1 = buildReason(reason1Id, ReasonType.GOOD, "Great");
@@ -159,7 +159,7 @@ class ReasonControllerTest {
 
         when(reasonService.getReasonsBySparkId(sparkId, null, 0, 10)).thenReturn(page);
 
-        mockMvc.perform(get("/sparks/{sparkId}/reasons", sparkId)
+        mockMvc.perform(get("/sparks/{sparkId}/reasons", sparkId.toHexString())
                         .param("size", "10")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
@@ -175,14 +175,14 @@ class ReasonControllerTest {
     @Test
     void getReasonsBySparkId_passesQueryParamsToService() throws Exception {
 
-        String sparkId = "spark-1";
+        ObjectId sparkId = new ObjectId();
         ReasonType type = ReasonType.GOOD;
         int page = 1;
         int size = 5;
 
         when(reasonService.getReasonsBySparkId(sparkId, type, page, size)).thenReturn(Page.empty());
 
-        mockMvc.perform(get("/sparks/{sparkId}/reasons", sparkId)
+        mockMvc.perform(get("/sparks/{sparkId}/reasons", sparkId.toHexString())
                         .param("type", type.getValue())
                         .param("page", String.valueOf(page))
                         .param("size", String.valueOf(size)))
@@ -194,7 +194,7 @@ class ReasonControllerTest {
     @Test
     void updateReason_returns200_onSuccess() throws Exception {
 
-        String sparkId = "spark-1";
+        ObjectId sparkId = new ObjectId();
         ObjectId reasonId = new ObjectId();
 
         UpdateReasonRequestDTO request = new UpdateReasonRequestDTO("Updated", ReasonType.GOOD);
@@ -203,7 +203,7 @@ class ReasonControllerTest {
         when(reasonService.updateReason(eq(sparkId), eq(reasonId), any(String.class), any(ReasonType.class)))
                 .thenReturn(updated);
 
-        mockMvc.perform(put("/sparks/{sparkId}/reasons/{reasonId}", sparkId, reasonId.toHexString())
+        mockMvc.perform(put("/sparks/{sparkId}/reasons/{reasonId}", sparkId.toHexString(), reasonId.toHexString())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -216,14 +216,14 @@ class ReasonControllerTest {
     @Test
     void updateReason_returns404_whenMissing() throws Exception {
 
-        String sparkId = "spark-1";
+        ObjectId sparkId = new ObjectId();
         ObjectId missingReasonId = new ObjectId("000000000000000000000001");
         UpdateReasonRequestDTO request = new UpdateReasonRequestDTO("Updated", ReasonType.GOOD);
 
         when(reasonService.updateReason(eq(sparkId), eq(missingReasonId), any(String.class), any(ReasonType.class)))
                 .thenThrow(new ReasonNotFoundException(missingReasonId));
 
-        mockMvc.perform(put("/sparks/{sparkId}/reasons/{reasonId}", sparkId, missingReasonId.toHexString())
+        mockMvc.perform(put("/sparks/{sparkId}/reasons/{reasonId}", sparkId.toHexString(), missingReasonId.toHexString())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isNotFound())
@@ -235,12 +235,12 @@ class ReasonControllerTest {
     @Test
     void deleteReason_returns204_onSuccess() throws Exception {
 
-        String sparkId = "spark-1";
+        ObjectId sparkId = new ObjectId();
         ObjectId reasonId = new ObjectId();
 
         doNothing().when(reasonService).deleteReason(sparkId, reasonId);
 
-        mockMvc.perform(delete("/sparks/{sparkId}/reasons/{reasonId}", sparkId, reasonId.toHexString()))
+        mockMvc.perform(delete("/sparks/{sparkId}/reasons/{reasonId}", sparkId.toHexString(), reasonId.toHexString()))
                 .andExpect(status().isNoContent());
 
         verify(reasonService).deleteReason(sparkId, reasonId);
@@ -249,7 +249,7 @@ class ReasonControllerTest {
     @Test
     void deleteReason_returns404_whenMissing() throws Exception {
 
-        String sparkId = "spark-1";
+        ObjectId sparkId = new ObjectId();
         ObjectId missingReasonId = new ObjectId("000000000000000000000001");
 
 
@@ -257,7 +257,7 @@ class ReasonControllerTest {
                 .when(reasonService)
                 .deleteReason(sparkId, missingReasonId);
 
-        mockMvc.perform(delete("/sparks/{sparkId}/reasons/{reasonId}", sparkId, missingReasonId.toHexString())
+        mockMvc.perform(delete("/sparks/{sparkId}/reasons/{reasonId}", sparkId.toHexString(), missingReasonId.toHexString())
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -270,11 +270,11 @@ class ReasonControllerTest {
     @Test
     void deleteAllReasonsBySparkId_returns204_onSuccess() throws Exception {
 
-        String sparkId = "spark-1";
+        ObjectId sparkId = new ObjectId();
 
         doNothing().when(reasonService).deleteAllReasonsBySparkId(sparkId);
 
-        mockMvc.perform(delete("/sparks/{sparkId}/reasons", sparkId))
+        mockMvc.perform(delete("/sparks/{sparkId}/reasons", sparkId.toHexString()))
                 .andExpect(status().isNoContent());
 
         verify(reasonService).deleteAllReasonsBySparkId(sparkId);
@@ -283,13 +283,13 @@ class ReasonControllerTest {
     @Test
     void createReason_returns409_whenContentDuplicate() throws Exception {
 
-        String sparkId = "spark-1";
+        ObjectId sparkId = new ObjectId();
         CreateReasonRequestDTO request = new CreateReasonRequestDTO("Duplicate", ReasonType.GOOD);
 
         when(reasonService.createReason(eq(sparkId), any(String.class), any(ReasonType.class)))
                 .thenThrow(new ReasonAlreadyExistsException("Duplicate"));
 
-        mockMvc.perform(post("/sparks/{sparkId}/reasons", sparkId)
+        mockMvc.perform(post("/sparks/{sparkId}/reasons", sparkId.toHexString())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isConflict())
@@ -301,14 +301,14 @@ class ReasonControllerTest {
     @Test
     void updateReason_returns409_whenContentDuplicate() throws Exception {
 
-        String sparkId = "spark-1";
+        ObjectId sparkId = new ObjectId();
         ObjectId reasonId = new ObjectId();
         UpdateReasonRequestDTO request = new UpdateReasonRequestDTO("Duplicate", ReasonType.GOOD);
 
         when(reasonService.updateReason(eq(sparkId), eq(reasonId), any(String.class), any(ReasonType.class)))
                 .thenThrow(new ReasonAlreadyExistsException("Duplicate"));
 
-        mockMvc.perform(put("/sparks/{sparkId}/reasons/{reasonId}", sparkId, reasonId.toHexString())
+        mockMvc.perform(put("/sparks/{sparkId}/reasons/{reasonId}", sparkId.toHexString(), reasonId.toHexString())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isConflict())

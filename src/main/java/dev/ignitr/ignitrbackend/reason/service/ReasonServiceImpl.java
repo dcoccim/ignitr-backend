@@ -53,7 +53,7 @@ public class ReasonServiceImpl implements ReasonService {
     }
 
     @Override
-    public Reason createReason(String sparkId, String content, ReasonType type) {
+    public Reason createReason(ObjectId sparkId, String content, ReasonType type) {
 
         debug(logger, "createReason", sparkId, "Creating Reason...");
 
@@ -77,7 +77,7 @@ public class ReasonServiceImpl implements ReasonService {
     }
 
     @Override
-    public Reason getReasonById(String sparkId, ObjectId reasonId) {
+    public Reason getReasonById(ObjectId sparkId, ObjectId reasonId) {
         debug(logger, "getReasonById", reasonId, "Fetching Reason by ID...");
         Spark spark = sparkService.getSparkById(sparkId);
         Reason reason = getReasonFromSparkById(spark, reasonId, "getReasonById");
@@ -86,7 +86,7 @@ public class ReasonServiceImpl implements ReasonService {
     }
 
     @Override
-    public Page<Reason> getReasonsBySparkId(String sparkId, ReasonType type, int page, int size) {
+    public Page<Reason> getReasonsBySparkId(ObjectId sparkId, ReasonType type, int page, int size) {
         debug(logger, "getReasonsBySparkId", sparkId,
                 "Fetching {} Reasons for spark...", type != null ? type.getValue() : "all");
         Spark existingSpark = sparkService.getSparkById(sparkId);
@@ -97,7 +97,7 @@ public class ReasonServiceImpl implements ReasonService {
     }
 
     @Override
-    public Reason updateReason(String sparkId, ObjectId reasonId, String content, ReasonType type) {
+    public Reason updateReason(ObjectId sparkId, ObjectId reasonId, String content, ReasonType type) {
         debug(logger, "updateReason", reasonId, "Updating Reason...");
 
         Spark existingSpark = sparkService.getSparkById(sparkId);
@@ -119,7 +119,7 @@ public class ReasonServiceImpl implements ReasonService {
     }
 
     @Override
-    public void deleteReason(String sparkId, ObjectId reasonId) {
+    public void deleteReason(ObjectId sparkId, ObjectId reasonId) {
 
         debug(logger, "deleteReason", reasonId, "Deleting Reason...");
 
@@ -139,7 +139,7 @@ public class ReasonServiceImpl implements ReasonService {
     }
 
     @Override
-    public void deleteAllReasonsBySparkId(String sparkId) {
+    public void deleteAllReasonsBySparkId(ObjectId sparkId) {
         debug(logger, "deleteAllReasonsBySparkId", sparkId, "Deleting all Reasons for Spark...");
 
         Spark existingSpark = sparkService.getSparkById(sparkId);

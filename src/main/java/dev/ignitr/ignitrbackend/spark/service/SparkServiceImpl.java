@@ -1,19 +1,15 @@
 package dev.ignitr.ignitrbackend.spark.service;
 
 import dev.ignitr.ignitrbackend.common.utils.LoggingUtils;
-import dev.ignitr.ignitrbackend.score.dto.SparkScoreRequestDTO;
-import dev.ignitr.ignitrbackend.score.dto.SparkTreeScoreResponseDTO;
-import dev.ignitr.ignitrbackend.score.mapper.SparkScoreMapper;
 import dev.ignitr.ignitrbackend.score.service.SparkScoreService;
-import dev.ignitr.ignitrbackend.spark.dto.*;
 import dev.ignitr.ignitrbackend.spark.exception.SparkAlreadyExistsException;
 import dev.ignitr.ignitrbackend.spark.exception.SparkNotFoundException;
 import dev.ignitr.ignitrbackend.spark.mapper.SparkMapper;
 import dev.ignitr.ignitrbackend.spark.model.Spark;
-import dev.ignitr.ignitrbackend.spark.model.SparkDeleteMode;
 import dev.ignitr.ignitrbackend.spark.repository.SparkRepository;
 
 import dev.ignitr.ignitrbackend.spark.tree.SparkTree;
+import org.bson.types.ObjectId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
@@ -55,17 +51,15 @@ public class SparkServiceImpl implements SparkService {
     }
 
     @Override
-    public Spark createSpark(CreateSparkRequestDTO dto) {
+    public Spark createSpark(String title, String description) {
 
         LoggingUtils.debug(logger, "createSpark", "",
                 "Creating new Spark...");
 
-        String title = dto.title();
-
         checkExistingTitle("createSpark", title);
 
         Instant now = Instant.now();
-        Spark newSpark = SparkMapper.toNewEntity(dto, now);
+        Spark newSpark = SparkMapper.toNewEntity(title, description, now);
 
         Spark savedSpark = saveSpark(newSpark);
 
@@ -76,9 +70,7 @@ public class SparkServiceImpl implements SparkService {
     }
 
     @Override
-    public Spark createChildSpark(String parentId, CreateSparkRequestDTO dto) {
-
-        String title = dto.title();
+    public Spark createChildSpark(ObjectId parentId, String title, String description) {
 
         LoggingUtils.debug(logger, "createChildSpark", parentId,
                 "Creating child Spark with title='{}'...", title);
@@ -88,7 +80,7 @@ public class SparkServiceImpl implements SparkService {
         checkExistingTitle("createChildSpark", title);
 
         Instant now = Instant.now();
-        Spark childSpark = SparkMapper.toNewChildEntity(dto, parent.getId(),now);
+        Spark childSpark = SparkMapper.toNewChildEntity(title, description, parent.getId(),now);
 
         Spark savedSpark = saveSpark(childSpark);
 
@@ -99,7 +91,7 @@ public class SparkServiceImpl implements SparkService {
     }
 
     @Override
-    public Spark getSparkById(String id) {
+    public Spark getSparkById(ObjectId id) {
 
         LoggingUtils.debug(logger,
                 "getSparkById", id,
@@ -121,7 +113,7 @@ public class SparkServiceImpl implements SparkService {
     }
 
     @Override
-    public List<Spark> getChildren(String parentId) throws SparkNotFoundException {
+    public List<Spark> getChildren(ObjectId parentId) {
 
         LoggingUtils.debug(logger, "getChildren", parentId,
                 "Fetching children Sparks...");
@@ -137,14 +129,14 @@ public class SparkServiceImpl implements SparkService {
     }
 
     @Override
-    public SparkTree getSparkTree(String rootId) {
+    public SparkTree getSparkTree(ObjectId rootId) {
 
         LoggingUtils.debug(logger, "getSparkTree", rootId,
                 "Fetching Spark subtree...");
 
         Spark root = getSparkById(rootId);
 
-        Map<String, Spark> sparkMap = new HashMap<>();
+        Map<ObjectId, Spark> sparkMap = new HashMap<>();
         Deque<Spark> stack = new ArrayDeque<>();
         stack.push(root);
 
@@ -164,9 +156,7 @@ public class SparkServiceImpl implements SparkService {
                 "Fetched Spark subtree with {} Sparks.", sparkMap.size());
 
         try {
-            Map<String, SparkScoreRequestDTO> sparkScoreRequestMap = SparkScoreMapper.toDtoMap(sparkMap);
-            SparkTreeScoreResponseDTO scoredTree = sparkScoreService.scoreTree(root.getId(), sparkScoreRequestMap);
-            return SparkScoreMapper.toScoredSparkTree(sparkMap, scoredTree);
+            return sparkScoreService.scoreTree(root.getId(), sparkMap);
         } catch (Exception e) {
             LoggingUtils.error(logger, "getSparkTree", root.getId(), e,
                     "Error scoring Spark tree, returning unscored tree.");
@@ -175,20 +165,18 @@ public class SparkServiceImpl implements SparkService {
     }
 
     @Override
-    public Spark updateSpark(String id, UpdateSparkRequestDTO dto) {
+    public Spark updateSpark(ObjectId id, String title, String description) {
 
         LoggingUtils.debug(logger, "updateSpark", id,
                 "Updating Spark...");
 
         Spark spark = getSparkById(id);
 
-        String newTitle = dto.title();
-
-        if(!spark.getTitle().equals(newTitle)) {
-            checkExistingTitle("updateSpark", newTitle);
+        if(!spark.getTitle().equals(title)) {
+            checkExistingTitle("updateSpark", title);
         }
         Instant now = Instant.now();
-        SparkMapper.updateEntity(spark, dto, now);
+        SparkMapper.updateEntity(spark, title, description, now);
         Spark savedSpark = saveSpark(spark);
         LoggingUtils.info(logger, "updateSpark", savedSpark.getId(),
                 "Spark updated.");
@@ -197,21 +185,19 @@ public class SparkServiceImpl implements SparkService {
     }
 
     @Override
-    public Spark partialUpdateSpark(String id, PatchSparkRequestDTO dto) {
+    public Spark partialUpdateSpark(ObjectId id, String title, String description) {
 
         LoggingUtils.debug(logger, "partialUpdateSpark", id,
                 "Partially updating Spark...");
 
         Spark spark = getSparkById(id);
 
-        String newTitle = dto.title();
-
-        if(newTitle != null && !spark.getTitle().equals(newTitle)) {
-            checkExistingTitle("partialUpdateSpark", newTitle);
+        if(title != null && !spark.getTitle().equals(title)) {
+            checkExistingTitle("partialUpdateSpark", title);
         }
 
         Instant now = Instant.now();
-        SparkMapper.partialUpdateEntity(spark, dto, now);
+        SparkMapper.partialUpdateEntity(spark, title, description, now);
         Spark savedSpark = saveSpark(spark);
         LoggingUtils.info(logger, "partialUpdateSpark", savedSpark.getId(),
                 "Spark partially updated.");
@@ -219,15 +205,15 @@ public class SparkServiceImpl implements SparkService {
         return savedSpark;
     }
 
-    private void deleteCascade(String rootId) {
+    private void deleteCascade(ObjectId rootId) {
 
-        List<String> idsToDelete = new ArrayList<>();
-        Deque<String> stack = new ArrayDeque<>();
+        List<ObjectId> idsToDelete = new ArrayList<>();
+        Deque<ObjectId> stack = new ArrayDeque<>();
 
         stack.push(rootId);
 
         while(!stack.isEmpty()) {
-            String currentId = stack.pop();
+            ObjectId currentId = stack.pop();
             idsToDelete.add(currentId);
 
             List<Spark> children = sparkRepository.findByParentId(currentId);
@@ -246,8 +232,8 @@ public class SparkServiceImpl implements SparkService {
 
     private void deletePromote(Spark spark) {
 
-        String id = spark.getId();
-        String parentId = spark.getParentId();
+        ObjectId id = spark.getId();
+        ObjectId parentId = spark.getParentId();
         Instant now = Instant.now();
 
         List<Spark> children = sparkRepository.findByParentId(id);
@@ -271,7 +257,7 @@ public class SparkServiceImpl implements SparkService {
     }
 
     @Override
-    public void deleteSpark(String id, SparkDeleteMode mode) {
+    public void deleteSpark(ObjectId id, SparkDeleteMode mode) {
 
         LoggingUtils.debug(logger, "deleteSpark", id,
                 "Deleting Spark in '{}' mode...", mode);
@@ -288,44 +274,38 @@ public class SparkServiceImpl implements SparkService {
     }
 
     @Override
-    public Page<Spark> searchSparks(String title, String parentId, int page, int size) {
+    public Page<Spark> searchSparks(String title, ParentSearchScope parentScope, ObjectId parentId, int page, int size) {
 
-        if(page < 0) {
-            page = 0;
-        }
-        if(size <=0) {
-            size = 20;
-        }
+        page = Math.max(page, 0);
+        size = size <= 0 ? 20 : size;
 
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "createdAt"));
 
-        Page<Spark> sparksPage;
-
-        boolean hasTitle = isNotNullOrEmpty(title);
-        boolean hasParent = isNotNullOrEmpty(parentId);
+        boolean byTitle = isNotNullOrEmpty(title);
 
         LoggingUtils.debug(logger, "searchSparks", "",
-                "Searching Sparks with criteria: [{}, page={}, size={}]...",
-                String.format("title='%s', parentId='%s'", title, parentId), page, size);
+                "Searching Sparks with criteria: [title='{}', parentScope={}, parentId={}, page={}, size={}]...",
+                title, parentScope, parentId, page, size);
 
-        if(hasTitle && hasParent) {
-            sparksPage = sparkRepository.findByParentIdAndTitleContainingIgnoreCase(parentId, title, pageable);
-        } else if (hasParent) {
-            if("ROOT".equalsIgnoreCase(parentId)) {
-                sparksPage = sparkRepository.findByParentIdIsNull(pageable);
-            } else {
-                sparksPage = sparkRepository.findByParentId(parentId, pageable);
-            }
-        } else if (hasTitle) {
-            sparksPage = sparkRepository.findByTitleContainingIgnoreCase(title, pageable);
+        Page<Spark> sparksPage;
+
+        if (byTitle) {
+            sparksPage = switch (parentScope) {
+                case ANY  -> sparkRepository.findByTitleContainingIgnoreCase(title, pageable);
+                case ROOT -> sparkRepository.findByParentIdIsNullAndTitleContainingIgnoreCase(title, pageable);
+                case ID   -> sparkRepository.findByParentIdAndTitleContainingIgnoreCase(parentId, title, pageable);
+            };
         } else {
-            sparksPage = sparkRepository.findAll(pageable);
+            sparksPage = switch (parentScope) {
+                case ANY  -> sparkRepository.findAll(pageable);
+                case ROOT -> sparkRepository.findByParentIdIsNull(pageable);
+                case ID   -> sparkRepository.findByParentId(parentId, pageable);
+            };
         }
 
         LoggingUtils.info(logger, "searchSparks", "",
-                "Found {} Sparks matching criteria: [{}, page={}, size={}].",
-                sparksPage.getTotalElements(),
-                String.format("title='%s', parentId='%s'", title, parentId), page, size);
+                "Found {} Sparks matching criteria: [title='{}', parentScope={}, parentId={}, page={}, size={}].",
+                sparksPage.getTotalElements(), title, parentScope, parentId, page, size);
 
         return sparksPage;
     }

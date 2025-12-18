@@ -34,11 +34,11 @@ class ReasonServiceImplTest {
         reasonService = new ReasonServiceImpl(sparkService);
     }
 
-    private Spark buildSpark(String id) {
+    private Spark buildSpark(ObjectId id) {
         Spark spark = new Spark();
         spark.setId(id);
-        spark.setTitle("Title " + id);
-        spark.setDescription("Description " + id);
+        spark.setTitle("Title " + id.toHexString());
+        spark.setDescription("Description " + id.toHexString());
         spark.setReasons(new ArrayList<>());
         spark.setCreatedAt(Instant.now());
         spark.setUpdatedAt(Instant.now());
@@ -58,7 +58,7 @@ class ReasonServiceImplTest {
     @Test
     void createReason_returnsSavedReason_whenSparkExists() {
 
-        String sparkId = "spark-1";
+        ObjectId sparkId = new ObjectId();
         String content = "Great work";
         ReasonType type = ReasonType.GOOD;
 
@@ -80,7 +80,7 @@ class ReasonServiceImplTest {
     @Test
     void getReasonById_returnsReason_whenFound() {
 
-        String sparkId = "spark-1";
+        ObjectId sparkId = new ObjectId();
         ObjectId reasonId = new ObjectId();
         Reason reason = buildReason(reasonId, ReasonType.GOOD, "Content");
 
@@ -98,7 +98,7 @@ class ReasonServiceImplTest {
     @Test
     void getReasonById_throwsWhenReasonMissing() {
 
-        String sparkId = "spark-1";
+        ObjectId sparkId = new ObjectId();
         Spark spark = buildSpark(sparkId);
 
         when(sparkService.getSparkById(sparkId)).thenReturn(spark);
@@ -115,7 +115,7 @@ class ReasonServiceImplTest {
     @Test
     void getReasonsBySparkId_filtersAndPaginates() {
 
-        String sparkId = "spark-1";
+        ObjectId sparkId = new ObjectId();
         Reason goodReason1 = buildReason(new ObjectId(), ReasonType.GOOD, "Nice");
         Reason goodReason2 = buildReason(new ObjectId(), ReasonType.GOOD, "Awesome");
         Reason badReason1 = buildReason(new ObjectId(), ReasonType.BAD, "Needs work");
@@ -140,7 +140,7 @@ class ReasonServiceImplTest {
     @Test
     void updateReason_updatesReason_whenPresent() {
 
-        String sparkId = "spark-1";
+        ObjectId sparkId = new ObjectId();
         ObjectId reasonId = new ObjectId();
         Reason existing = buildReason(reasonId, ReasonType.BAD, "Old");
 
@@ -163,7 +163,7 @@ class ReasonServiceImplTest {
     @Test
     void updateReason_throwsWhenMissing() {
 
-        String sparkId = "spark-1";
+        ObjectId sparkId = new ObjectId();
         Spark spark = buildSpark(sparkId);
 
         when(sparkService.getSparkById(sparkId)).thenReturn(spark);
@@ -180,7 +180,7 @@ class ReasonServiceImplTest {
     @Test
     void deleteReason_removesReason_whenPresent() {
 
-        String sparkId = "spark-1";
+        ObjectId sparkId = new ObjectId();
         ObjectId reasonId = new ObjectId();
         Reason reason = buildReason(reasonId, ReasonType.BAD, "Content");
 
@@ -198,7 +198,7 @@ class ReasonServiceImplTest {
     @Test
     void deleteReason_throwsWhenMissing() {
 
-        String sparkId = "spark-1";
+        ObjectId sparkId = new ObjectId();
         Spark spark = buildSpark(sparkId);
 
         when(sparkService.getSparkById(sparkId)).thenReturn(spark);
@@ -215,7 +215,7 @@ class ReasonServiceImplTest {
     @Test
     void deleteAllReasonsBySparkId_clearsReasons() {
 
-        String sparkId = "spark-1";
+        ObjectId sparkId = new ObjectId();
         Spark spark = buildSpark(sparkId);
         spark.getReasons().addAll(List.of(
                 buildReason(new ObjectId(), ReasonType.GOOD, "Nice"),
@@ -233,7 +233,7 @@ class ReasonServiceImplTest {
     @Test
     void createReason_throwsWhenContentAlreadyExists() {
 
-        String sparkId = "spark-1";
+        ObjectId sparkId = new ObjectId();
         Reason existing = buildReason(new ObjectId(), ReasonType.GOOD, "Duplicate");
 
         Spark spark = buildSpark(sparkId);
@@ -254,7 +254,7 @@ class ReasonServiceImplTest {
     @Test
     void updateReason_throwsWhenContentAlreadyExists() {
 
-        String sparkId = "spark-1";
+        ObjectId sparkId = new ObjectId();
         ObjectId reason1Id = new ObjectId();
         ObjectId reason2Id = new ObjectId();
 

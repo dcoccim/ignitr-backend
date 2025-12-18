@@ -9,15 +9,15 @@ import org.springframework.stereotype.Service;
 @Service
 public interface ReasonService {
 
-    Reason createReason(String sparkId, String content, ReasonType type);
+    Reason createReason(ObjectId sparkId, String content, ReasonType type);
 
-    Reason getReasonById(String sparkId, ObjectId reasonId);
+    Reason getReasonById(ObjectId sparkId, ObjectId reasonId);
 
-    Page<Reason> getReasonsBySparkId(String sparkId, ReasonType type, int page, int size);
+    Page<Reason> getReasonsBySparkId(ObjectId sparkId, ReasonType type, int page, int size);
 
-    Reason updateReason(String sparkId, ObjectId reasonId, String content, ReasonType type);
+    Reason updateReason(ObjectId sparkId, ObjectId reasonId, String content, ReasonType type);
 
-    void deleteReason(String sparkId, ObjectId reasonId);
+    void deleteReason(ObjectId sparkId, ObjectId reasonId);
 
-    void deleteAllReasonsBySparkId(String sparkId);
+    void deleteAllReasonsBySparkId(ObjectId sparkId);
 }

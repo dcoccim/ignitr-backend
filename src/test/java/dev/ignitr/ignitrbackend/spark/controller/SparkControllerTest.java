@@ -7,9 +7,11 @@ import dev.ignitr.ignitrbackend.spark.dto.UpdateSparkRequestDTO;
 import dev.ignitr.ignitrbackend.spark.exception.SparkAlreadyExistsException;
 import dev.ignitr.ignitrbackend.spark.exception.SparkNotFoundException;
 import dev.ignitr.ignitrbackend.spark.model.Spark;
-import dev.ignitr.ignitrbackend.spark.model.SparkDeleteMode;
+import dev.ignitr.ignitrbackend.spark.service.ParentSearchScope;
+import dev.ignitr.ignitrbackend.spark.service.SparkDeleteMode;
 import dev.ignitr.ignitrbackend.spark.service.SparkService;
 import dev.ignitr.ignitrbackend.spark.tree.SparkTree;
+import org.bson.types.ObjectId;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -56,12 +58,12 @@ class SparkControllerTest {
 
         CreateSparkRequestDTO request = new CreateSparkRequestDTO(title, description);
 
-        String mockId = "spark-id-123";
+        ObjectId id = new ObjectId();
         Instant now = Instant.now();
 
-        Spark spark = new Spark(mockId, title, description, null, List.of(), now, now);
+        Spark spark = new Spark(id, title, description, null, List.of(), now, now);
 
-        when(sparkService.createSpark(any(CreateSparkRequestDTO.class)))
+        when(sparkService.createSpark(any(String.class), any(String.class)))
                 .thenReturn(spark);
 
         mockMvc.perform(post("/sparks")
@@ -69,7 +71,7 @@ class SparkControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.id", is(mockId)))
+                .andExpect(jsonPath("$.id", is(id.toHexString())))
                 .andExpect(jsonPath("$.title", is(title)))
                 .andExpect(jsonPath("$.description", is(description)));
     }
@@ -82,7 +84,7 @@ class SparkControllerTest {
 
         CreateSparkRequestDTO request = new CreateSparkRequestDTO(duplicateTitle, description);
 
-        when(sparkService.createSpark(any(CreateSparkRequestDTO.class)))
+        when(sparkService.createSpark(any(String.class), any(String.class)))
                 .thenThrow(new SparkAlreadyExistsException(duplicateTitle));
 
         mockMvc.perform(post("/sparks")
@@ -117,26 +119,26 @@ class SparkControllerTest {
     @Test
     void createChildSpark_returns201AndBody_onSuccess() throws Exception {
 
-        String parentId = "parent-123";
+        ObjectId parentId = new ObjectId();
         String title = "Child Spark";
         String description = "Description";
 
         CreateSparkRequestDTO request = new CreateSparkRequestDTO(title, description);
 
-        String mockChildId = "child-id-456";
+        ObjectId childId = new ObjectId();
         Instant now = Instant.now();
 
-        Spark child = new Spark (mockChildId, title, description, parentId, List.of(), now, now);
+        Spark child = new Spark (childId, title, description, parentId, List.of(), now, now);
 
-        when(sparkService.createChildSpark(eq(parentId), any(CreateSparkRequestDTO.class)))
+        when(sparkService.createChildSpark(eq(parentId), any(String.class), any(String.class)))
                 .thenReturn(child);
 
-        mockMvc.perform(post("/sparks/{parentId}/children", parentId)
+        mockMvc.perform(post("/sparks/{parentId}/children", parentId.toHexString())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.id", is(mockChildId)))
+                .andExpect(jsonPath("$.id", is(childId.toHexString())))
                 .andExpect(jsonPath("$.title", is(title)))
                 .andExpect(jsonPath("$.description", is(description)));
     }
@@ -144,16 +146,16 @@ class SparkControllerTest {
     @Test
     void createChildSpark_returns404AndApiError_whenParentNotFound() throws Exception {
 
-        String parentId = "missing-parent";
+        ObjectId missingParentId = new ObjectId("000000000000000000000001");
         String title = "Child Spark";
         String description = "Description";
 
         CreateSparkRequestDTO request = new CreateSparkRequestDTO(title, description);
 
-        when(sparkService.createChildSpark(eq(parentId), any(CreateSparkRequestDTO.class)))
-                .thenThrow(new SparkNotFoundException(parentId));
+        when(sparkService.createChildSpark(eq(missingParentId), any(String.class), any(String.class)))
+                .thenThrow(new SparkNotFoundException(missingParentId));
 
-        mockMvc.perform(post("/sparks/{parentId}/children", parentId)
+        mockMvc.perform(post("/sparks/{parentId}/children", missingParentId.toHexString())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isNotFound())
@@ -165,7 +167,7 @@ class SparkControllerTest {
     @Test
     void getSpark_returns200AndBody_onSuccess() throws Exception {
 
-        String id = "spark-123";
+        ObjectId id = new ObjectId();
         String title = "My Spark";
         String description = "Description";
         Instant now = Instant.now();
@@ -174,11 +176,11 @@ class SparkControllerTest {
 
         when(sparkService.getSparkById(id)).thenReturn(spark);
 
-        mockMvc.perform(get("/sparks/{id}", id)
+        mockMvc.perform(get("/sparks/{id}", id.toHexString())
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.id", is(id)))
+                .andExpect(jsonPath("$.id", is(id.toHexString())))
                 .andExpect(jsonPath("$.title", is(title)))
                 .andExpect(jsonPath("$.description", is(description)));
     }
@@ -186,12 +188,12 @@ class SparkControllerTest {
     @Test
     void getSpark_returns404AndApiError_whenNotFound() throws Exception {
 
-        String missingId = "missing-id";
+        ObjectId missingId = new ObjectId("000000000000000000000001");
 
         when(sparkService.getSparkById(missingId))
                 .thenThrow(new SparkNotFoundException(missingId));
 
-        mockMvc.perform(get("/sparks/{id}", missingId)
+        mockMvc.perform(get("/sparks/{id}", missingId.toHexString())
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -202,10 +204,10 @@ class SparkControllerTest {
     @Test
     void getSparkChildren_returns200AndList_onSuccess() throws Exception {
 
-        String parentId = "parent-123";
-        String child1Id = "child-1";
+        ObjectId parentId = new ObjectId();
+        ObjectId child1Id = new ObjectId();
         String child1Title = "Child 1";
-        String child2Id = "child-2";
+        ObjectId child2Id = new ObjectId();
         String child2Title = "Child 2";
         Instant now = Instant.now();
 
@@ -215,25 +217,25 @@ class SparkControllerTest {
 
         when(sparkService.getChildren(parentId)).thenReturn(List.of(child1, child2));
 
-        mockMvc.perform(get("/sparks/{id}/children", parentId)
+        mockMvc.perform(get("/sparks/{id}/children", parentId.toHexString())
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$[0].id", is(child1Id)))
+                .andExpect(jsonPath("$[0].id", is(child1Id.toHexString())))
                 .andExpect(jsonPath("$[0].title", is(child1Title)))
-                .andExpect(jsonPath("$[1].id", is(child2Id)))
+                .andExpect(jsonPath("$[1].id", is(child2Id.toHexString())))
                 .andExpect(jsonPath("$[1].title", is(child2Title)));
     }
 
     @Test
     void getSparkChildren_returns404AndApiError_whenParentNotFound() throws Exception {
 
-        String missingParentId = "missing-parent";
+        ObjectId missingParentId = new ObjectId("000000000000000000000001");
 
         when(sparkService.getChildren(missingParentId))
                 .thenThrow(new SparkNotFoundException(missingParentId));
 
-        mockMvc.perform(get("/sparks/{id}/children", missingParentId)
+        mockMvc.perform(get("/sparks/{id}/children", missingParentId.toHexString())
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -244,10 +246,10 @@ class SparkControllerTest {
     @Test
     void getSparkTree_returns200AndBody_onSuccess() throws Exception {
 
-        String rootId = "root-1";
-        String child1Id = "child-1";
-        String child2Id = "child-2";
-        String childOfChild1Id = "child-of-child-1";
+        ObjectId rootId = new ObjectId();
+        ObjectId child1Id = new ObjectId();
+        ObjectId child2Id = new ObjectId();
+        ObjectId childOfChild1Id = new ObjectId();
         String rootTitle = "Root";
         String child1Title = "Child 1";
         String child2Title = "Child 2";
@@ -301,22 +303,22 @@ class SparkControllerTest {
 
         when(sparkService.getSparkTree(rootId)).thenReturn(tree);
 
-        mockMvc.perform(get("/sparks/{id}/tree", rootId)
+        mockMvc.perform(get("/sparks/{id}/tree", rootId.toHexString())
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
 
-                .andExpect(jsonPath("$.id", is(rootId)))
+                .andExpect(jsonPath("$.id", is(rootId.toHexString())))
                 .andExpect(jsonPath("$.title", is(rootTitle)))
                 .andExpect(jsonPath("$.children").isArray())
 
-                .andExpect(jsonPath("$.children[0].id", is(child1Id)))
+                .andExpect(jsonPath("$.children[0].id", is(child1Id.toHexString())))
                 .andExpect(jsonPath("$.children[0].title", is(child1Title)))
                 .andExpect(jsonPath("$.children[0].children").isArray())
-                .andExpect(jsonPath("$.children[0].children[0].id", is(childOfChild1Id)))
+                .andExpect(jsonPath("$.children[0].children[0].id", is(childOfChild1Id.toHexString())))
                 .andExpect(jsonPath("$.children[0].children[0].title", is(childOfChild1Title)))
 
-                .andExpect(jsonPath("$.children[1].id", is(child2Id)))
+                .andExpect(jsonPath("$.children[1].id", is(child2Id.toHexString())))
                 .andExpect(jsonPath("$.children[1].title", is(child2Title)))
                 .andExpect(jsonPath("$.children[1].children").isArray())
                 .andExpect(jsonPath("$.children[1].children").isEmpty());
@@ -325,11 +327,11 @@ class SparkControllerTest {
     @Test
     void getSparkTree_returns404AndApiError_whenRootNotFound() throws Exception {
 
-        String missingId = "missing-id";
+        ObjectId missingId = new ObjectId("000000000000000000000001");
         when(sparkService.getSparkTree(missingId))
                 .thenThrow(new SparkNotFoundException(missingId));
 
-        mockMvc.perform(get("/sparks/{id}/tree", missingId)
+        mockMvc.perform(get("/sparks/{id}/tree", missingId.toHexString())
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -340,7 +342,7 @@ class SparkControllerTest {
     @Test
     void updateSpark_returns200AndBody_onSuccess() throws Exception {
 
-        String id = "spark-1";
+        ObjectId id = new ObjectId();
         String newTitle = "Updated title";
         String newDescription = "Updated description";
         Instant now = Instant.now();
@@ -357,15 +359,15 @@ class SparkControllerTest {
                 now
         );
 
-        when(sparkService.updateSpark(eq(id), any(UpdateSparkRequestDTO.class)))
+        when(sparkService.updateSpark(eq(id), any(String.class), any(String.class)))
                 .thenReturn(updated);
 
-        mockMvc.perform(put("/sparks/{id}", id)
+        mockMvc.perform(put("/sparks/{id}", id.toHexString())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.id", is(id)))
+                .andExpect(jsonPath("$.id", is(id.toHexString())))
                 .andExpect(jsonPath("$.title", is(newTitle)))
                 .andExpect(jsonPath("$.description", is(newDescription)));
     }
@@ -373,13 +375,13 @@ class SparkControllerTest {
     @Test
     void updateSpark_returns404AndApiError_whenNotFound() throws Exception {
 
-        String missingId = "missing-id";
+        ObjectId missingId = new ObjectId("000000000000000000000001");
         UpdateSparkRequestDTO request = new UpdateSparkRequestDTO("Title", "Desc");
 
-        when(sparkService.updateSpark(eq(missingId), any(UpdateSparkRequestDTO.class)))
+        when(sparkService.updateSpark(eq(missingId), any(String.class), any(String.class)))
                 .thenThrow(new SparkNotFoundException(missingId));
 
-        mockMvc.perform(put("/sparks/{id}", missingId)
+        mockMvc.perform(put("/sparks/{id}", missingId.toHexString())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isNotFound())
@@ -391,14 +393,14 @@ class SparkControllerTest {
     @Test
     void updateSpark_returns409AndApiError_onDuplicateTitle() throws Exception {
 
-        String id = "spark-1";
+        ObjectId id = new ObjectId();
         String duplicateTitle = "Duplicate title";
         UpdateSparkRequestDTO request = new UpdateSparkRequestDTO(duplicateTitle, "Desc");
 
-        when(sparkService.updateSpark(eq(id), any(UpdateSparkRequestDTO.class)))
+        when(sparkService.updateSpark(eq(id), any(String.class), any(String.class)))
                 .thenThrow(new SparkAlreadyExistsException(duplicateTitle));
 
-        mockMvc.perform(put("/sparks/{id}", id)
+        mockMvc.perform(put("/sparks/{id}", id.toHexString())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isConflict())
@@ -410,14 +412,14 @@ class SparkControllerTest {
     @Test
     void updateSpark_returns400AndValidationError_onInvalidPayload() throws Exception {
 
-        String id = "spark-1";
+        ObjectId id = new ObjectId();
 
         UpdateSparkRequestDTO request = new UpdateSparkRequestDTO(
                 "",
                 "Some description"
         );
 
-        mockMvc.perform(put("/sparks/{id}", id)
+        mockMvc.perform(put("/sparks/{id}", id.toHexString())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
@@ -429,7 +431,7 @@ class SparkControllerTest {
     @Test
     void patchSpark_returns200AndBody_onSuccess() throws Exception {
 
-        String id = "spark-1";
+        ObjectId id = new ObjectId();
         String newTitle = "Updated title";
         String newDescription = "Updated description";
         Instant now = Instant.now();
@@ -446,15 +448,15 @@ class SparkControllerTest {
                 now
         );
 
-        when(sparkService.partialUpdateSpark(eq(id), any(PatchSparkRequestDTO.class)))
+        when(sparkService.partialUpdateSpark(eq(id), any(String.class), any(String.class)))
                 .thenReturn(updated);
 
-        mockMvc.perform(patch("/sparks/{id}", id)
+        mockMvc.perform(patch("/sparks/{id}", id.toHexString())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.id", is(id)))
+                .andExpect(jsonPath("$.id", is(id.toHexString())))
                 .andExpect(jsonPath("$.title", is(newTitle)))
                 .andExpect(jsonPath("$.description", is(newDescription)));
     }
@@ -462,14 +464,14 @@ class SparkControllerTest {
     @Test
     void patchSpark_returns409AndApiError_onDuplicateTitle() throws Exception {
 
-        String id = "spark-1";
+        ObjectId id = new ObjectId();
         String duplicateTitle = "Duplicate title";
         PatchSparkRequestDTO request = new PatchSparkRequestDTO(duplicateTitle, "Desc");
 
-        when(sparkService.partialUpdateSpark(eq(id), any(PatchSparkRequestDTO.class)))
+        when(sparkService.partialUpdateSpark(eq(id), any(String.class), any(String.class)))
                 .thenThrow(new SparkAlreadyExistsException(duplicateTitle));
 
-        mockMvc.perform(patch("/sparks/{id}", id)
+        mockMvc.perform(patch("/sparks/{id}", id.toHexString())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isConflict())
@@ -481,14 +483,14 @@ class SparkControllerTest {
     @Test
     void patchSpark_returns400AndValidationError_onInvalidPayload() throws Exception {
 
-        String id = "spark-1";
+        ObjectId id = new ObjectId();
 
         PatchSparkRequestDTO request = new PatchSparkRequestDTO(
                 "",
                 "Some description"
         );
 
-        mockMvc.perform(patch("/sparks/{id}", id)
+        mockMvc.perform(patch("/sparks/{id}", id.toHexString())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
@@ -500,13 +502,13 @@ class SparkControllerTest {
     @Test
     void deleteSpark_returns204_onCascadeSuccess() throws Exception {
 
-        String id = "spark-123";
+        ObjectId id = new ObjectId();
 
         // Service does not throw → success
         doNothing().when(sparkService).deleteSpark(id, SparkDeleteMode.CASCADE);
 
-        mockMvc.perform(delete("/sparks/{id}", id)
-                        .param("mode", "CASCADE"))
+        mockMvc.perform(delete("/sparks/{id}", id.toHexString())
+                        .param("mode", "cascade"))
                 .andExpect(status().isNoContent());
 
         verify(sparkService).deleteSpark(id, SparkDeleteMode.CASCADE);
@@ -515,12 +517,12 @@ class SparkControllerTest {
     @Test
     void deleteSpark_returns204_onPromoteSuccess() throws Exception {
 
-        String id = "spark-456";
+        ObjectId id = new ObjectId();
 
         doNothing().when(sparkService).deleteSpark(id, SparkDeleteMode.PROMOTE);
 
-        mockMvc.perform(delete("/sparks/{id}", id)
-                        .param("mode", "PROMOTE"))
+        mockMvc.perform(delete("/sparks/{id}", id.toHexString())
+                        .param("mode", "promote"))
                 .andExpect(status().isNoContent());
 
         verify(sparkService).deleteSpark(id, SparkDeleteMode.PROMOTE);
@@ -529,14 +531,14 @@ class SparkControllerTest {
     @Test
     void deleteSpark_returns404AndApiError_whenNotFound() throws Exception {
 
-        String missingId = "missing-id";
+        ObjectId missingId = new ObjectId("000000000000000000000001");
 
         // Whenever deleteSpark is called with this id + CASCADE, throw not found
         doThrow(new SparkNotFoundException(missingId))
                 .when(sparkService)
                 .deleteSpark(missingId, SparkDeleteMode.CASCADE);
 
-        mockMvc.perform(delete("/sparks/{id}", missingId)
+        mockMvc.perform(delete("/sparks/{id}", missingId.toHexString())
                         .param("mode", "CASCADE")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound())
@@ -550,8 +552,8 @@ class SparkControllerTest {
     @Test
     void searchSparks_returns200AndList_onSuccess() throws Exception {
 
-        String id1 = "spark-1";
-        String id2 = "spark-2";
+        ObjectId id1 = new ObjectId();
+        ObjectId id2 = new ObjectId();
         String title1 = "First spark";
         String title2 = "Second spark";
         Instant now = Instant.now();
@@ -565,22 +567,22 @@ class SparkControllerTest {
                 2
         );
 
-        when(sparkService.searchSparks(null, null, 0, 20)).thenReturn(page);
+        when(sparkService.searchSparks(null, ParentSearchScope.ANY, null, 0, 20)).thenReturn(page);
 
         mockMvc.perform(get("/sparks")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.content[0].id", is(id1)))
+                .andExpect(jsonPath("$.content[0].id", is(id1.toHexString())))
                 .andExpect(jsonPath("$.content[0].title", is("First spark")))
-                .andExpect(jsonPath("$.content[1].id", is(id2)))
+                .andExpect(jsonPath("$.content[1].id", is(id2.toHexString())))
                 .andExpect(jsonPath("$.content[1].title", is("Second spark")));
     }
 
     @Test
     void searchSparks_returns200AndPassesQueryParams_toService() throws Exception {
 
-        when(sparkService.searchSparks("test", "ROOT", 1, 10))
+        when(sparkService.searchSparks("test", ParentSearchScope.ROOT, null,1, 10))
                 .thenReturn(Page.empty());
 
         mockMvc.perform(get("/sparks")
@@ -591,6 +593,6 @@ class SparkControllerTest {
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
 
-        verify(sparkService).searchSparks("test", "ROOT", 1, 10);
+        verify(sparkService).searchSparks("test", ParentSearchScope.ROOT, null, 1, 10);
     }
 }

@@ -15,4 +15,3 @@ server:
 ignitr:
   scorer:
     url: http://localhost:3000/api
-

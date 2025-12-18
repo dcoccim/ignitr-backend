@@ -7,4 +7,3 @@ server:
 restclient:
   connect-timeout: 5000
   read-timeout: 5000
-

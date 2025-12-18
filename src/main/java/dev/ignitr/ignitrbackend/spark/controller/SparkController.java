@@ -41,7 +41,7 @@ public class SparkController {
     )
     public ResponseEntity<SparkDTO> create(@Valid @RequestBody CreateSparkRequestDTO request) {
         Spark newSpark = sparkService.createSpark(request.title(), request.description());
-        SparkDTO response = SparkMapper.toSparkDto(newSpark);
+        SparkDTO response = SparkMapper.toSparkDto(newSpark, false);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -58,7 +58,7 @@ public class SparkController {
             throw new IllegalArgumentException("Invalid parent ID format.");
         }
         Spark newChildSpark = sparkService.createChildSpark(new ObjectId(parentId), request.title(), request.description());
-        SparkDTO response = SparkMapper.toSparkDto(newChildSpark);
+        SparkDTO response = SparkMapper.toSparkDto(newChildSpark, false);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -66,12 +66,15 @@ public class SparkController {
             path = "/{id}",
             produces = MediaType.APPLICATION_JSON_VALUE
     )
-    public ResponseEntity<SparkDTO> getById(@PathVariable String id) {
+    public ResponseEntity<SparkDTO> getById(
+            @PathVariable String id,
+            @RequestParam (name = "includeReasons", defaultValue = "false") boolean includeReasons
+    ) {
         if(isInvalidObjectId(id)) {
             throw new IllegalArgumentException("Invalid spark ID format.");
         }
         Spark spark = sparkService.getSparkById(new ObjectId(id));
-        SparkDTO response = SparkMapper.toSparkDto(spark);
+        SparkDTO response = SparkMapper.toSparkDto(spark, includeReasons);
         return ResponseEntity.ok(response);
     }
 
@@ -79,13 +82,16 @@ public class SparkController {
             path="/{id}/children",
             produces = MediaType.APPLICATION_JSON_VALUE
     )
-    public ResponseEntity<List<SparkDTO>> getChildren(@PathVariable String id) {
+    public ResponseEntity<List<SparkDTO>> getChildren(
+            @PathVariable String id,
+            @RequestParam (name = "includeReasons", defaultValue = "false") boolean includeReasons
+    ) {
         if(isInvalidObjectId(id)) {
             throw new IllegalArgumentException("Invalid spark ID format.");
         }
         List<Spark> children = sparkService.getChildren(new ObjectId(id));
         List<SparkDTO> response = children.stream()
-                .map(SparkMapper::toSparkDto)
+                .map((s) -> SparkMapper.toSparkDto(s, includeReasons))
                 .toList();
         return ResponseEntity.ok(response);
     }
@@ -116,7 +122,7 @@ public class SparkController {
             throw new IllegalArgumentException("Invalid spark ID format.");
         }
         Spark updatedSpark = sparkService.updateSpark(new ObjectId(id), request.title(), request.description());
-        SparkDTO response = SparkMapper.toSparkDto(updatedSpark);
+        SparkDTO response = SparkMapper.toSparkDto(updatedSpark, false);
         return ResponseEntity.ok(response);
     }
 
@@ -133,7 +139,7 @@ public class SparkController {
             throw new IllegalArgumentException("Invalid spark ID format.");
         }
         Spark updatedSpark = sparkService.partialUpdateSpark(new ObjectId(id), request.title(), request.description());
-        SparkDTO response = SparkMapper.toSparkDto(updatedSpark);
+        SparkDTO response = SparkMapper.toSparkDto(updatedSpark, false);
         return ResponseEntity.ok(response);
     }
 
@@ -154,6 +160,7 @@ public class SparkController {
     public ResponseEntity<PagedResponse<SparkDTO>> searchSparks(
             @RequestParam(name = "title", required = false) String title,
             @RequestParam(name = "parentId", required = false) String parentId,
+            @RequestParam(name = "includeReasons", defaultValue = "false") boolean includeReasons,
             @RequestParam(name = "page", defaultValue = "0") int page,
             @RequestParam(name = "size", defaultValue = "20") int size
     ) {
@@ -172,7 +179,7 @@ public class SparkController {
             parentObjectId = new ObjectId(parentId);
         }
         Page<Spark> sparksPage = sparkService.searchSparks(title, scope, parentObjectId , page, size);
-        Page<SparkDTO> response = sparksPage.map(SparkMapper::toSparkDto);
+        Page<SparkDTO> response = sparksPage.map((s) -> SparkMapper.toSparkDto(s, includeReasons));
         PagedResponse<SparkDTO> pagedResponse = new PagedResponse<>(
                 response.getContent(),
                 response.getNumber(),

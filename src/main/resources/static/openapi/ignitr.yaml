@@ -58,6 +58,13 @@ paths:
           schema:
             type: string
           description: Return only Sparks that have this parent id. Use special value "ROOT" for top-level Sparks.
+        - name: includeReasons
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+          description: When true, each Spark payload embeds its reasons collection.
         - name: page
           in: query
           required: false
@@ -132,6 +139,13 @@ paths:
           schema:
             type: string
           description: ID of the Spark.
+        - name: includeReasons
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+          description: When true, the response includes the Spark's reasons collection.
       responses:
         "200":
           description: Spark found.
@@ -282,6 +296,13 @@ paths:
           schema:
             type: string
           description: ID of the parent Spark.
+        - name: includeReasons
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+          description: When true, each child Spark includes its reasons collection.
       responses:
         "200":
           description: Children found (may be an empty list if none).

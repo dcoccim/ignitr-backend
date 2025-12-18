@@ -1,5 +1,6 @@
 package dev.ignitr.ignitrbackend.spark.mapper;
 
+import dev.ignitr.ignitrbackend.reason.mapper.ReasonMapper;
 import dev.ignitr.ignitrbackend.reason.model.ReasonType;
 import dev.ignitr.ignitrbackend.score.tree.ScoredSparkTree;
 import dev.ignitr.ignitrbackend.spark.dto.*;
@@ -9,6 +10,7 @@ import org.bson.types.ObjectId;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 public class SparkMapper {
@@ -21,7 +23,7 @@ public class SparkMapper {
                 title,
                 description,
                 null,
-                null,
+                new ArrayList<>(),
                 now,
                 now
         );
@@ -54,18 +56,18 @@ public class SparkMapper {
                 title,
                 description,
                 parentId,
-                null,
+                new ArrayList<>(),
                 now,
                 now
         );
     }
 
-    public static SparkDTO toSparkDto(Spark entity) {
+    public static SparkDTO toSparkDto(Spark entity, boolean includeReasons) {
         return new SparkDTO(
                 entity.getId().toHexString(),
                 entity.getTitle(),
                 entity.getDescription(),
-                null,
+                includeReasons ? entity.getReasons().stream().map(ReasonMapper::toDto).toList() : List.of(),
                 entity.getCreatedAt(),
                 entity.getUpdatedAt()
         );

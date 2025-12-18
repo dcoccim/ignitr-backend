@@ -30,7 +30,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(SparkAlreadyExistsException.class)
     public ResponseEntity<ApiError> handleSparkAlreadyExists(SparkAlreadyExistsException ex, WebRequest request) {
 
-        warn(logger, "handleSparkAlreadyExists", "", "Spark already exists: {}", ex.getMessage());
+        warn(logger, "handleSparkAlreadyExists", null, "Spark already exists: {}", ex.getMessage());
 
         ApiError errorBody = ApiError.fromCode(SPARK_ALREADY_EXISTS, ex.getMessage(), request.getDescription(false));
 
@@ -40,7 +40,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ReasonAlreadyExistsException.class)
     public ResponseEntity<ApiError> handleReasonAlreadyExists(ReasonAlreadyExistsException ex, WebRequest request) {
 
-        warn(logger, "handleReasonAlreadyExists", "", "Reason already exists: {}", ex.getMessage());
+        warn(logger, "handleReasonAlreadyExists", null, "Reason already exists: {}", ex.getMessage());
 
         ApiError errorBody = ApiError.fromCode(REASON_ALREADY_EXISTS, ex.getMessage(), request.getDescription(false));
 
@@ -49,21 +49,21 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(SparkNotFoundException.class)
     public ResponseEntity<ApiError> handleSparkNotFound(SparkNotFoundException ex, WebRequest request) {
-        warn(logger, "handleSparkNotFound", "", "Spark not found: {}", ex.getMessage());
+        warn(logger, "handleSparkNotFound", null, "Spark not found: {}", ex.getMessage());
         ApiError errorBody = ApiError.fromCode(SPARK_NOT_FOUND, ex.getMessage(), request.getDescription(false));
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorBody);
     }
 
     @ExceptionHandler(ReasonNotFoundException.class)
     public ResponseEntity<ApiError> handleReasonNotFound(ReasonNotFoundException ex, WebRequest request) {
-        warn(logger, "handleReasonNotFound", "", "Reason not found: {}", ex.getMessage());
+        warn(logger, "handleReasonNotFound", null, "Reason not found: {}", ex.getMessage());
         ApiError errorBody = ApiError.fromCode(REASON_NOT_FOUND, ex.getMessage(), request.getDescription(false));
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorBody);
     }
 
     @ExceptionHandler(DuplicateKeyException.class)
     public ResponseEntity<ApiError> handleDuplicateKey(DuplicateKeyException ex, WebRequest request) {
-        warn(logger, "handleDuplicateKey", "", "Duplicate key error: {}", ex.getMessage());
+        warn(logger, "handleDuplicateKey", null, "Duplicate key error: {}", ex.getMessage());
         ApiError errorBody = ApiError.fromCode(DUPLICATE_KEY, ex.getMessage(), request.getDescription(false));
         return ResponseEntity.status(HttpStatus.CONFLICT).body(errorBody);
     }
@@ -87,7 +87,7 @@ public class GlobalExceptionHandler {
         error(
                 logger,
                 "handleGeneric",
-                "unknown", ex,
+                null, ex,
                 "Internal server error at path=[{}]", request.getDescription(false));
         ApiError errorBody = ApiError.fromCode(INTERNAL_ERROR, ex.getMessage(), request.getDescription(false));
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorBody);

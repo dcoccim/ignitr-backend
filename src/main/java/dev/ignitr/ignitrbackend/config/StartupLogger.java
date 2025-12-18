@@ -26,8 +26,8 @@ public class StartupLogger {
 
     @PostConstruct
     public void logConfig() {
-        LoggingUtils.info(logger, "logConfig", "", "Current profile(s) active: {}", String.join(", ", env.getActiveProfiles()));
-        LoggingUtils.info(logger, "logConfig", "", "MongoDB URI: {}", mongoUri);
-        LoggingUtils.info(logger, "logConfig", "", "Scoring Service Base URL: {}", scorerUrl);
+        LoggingUtils.info(logger, "logConfig", null, "Current profile(s) active: {}", String.join(", ", env.getActiveProfiles()));
+        LoggingUtils.info(logger, "logConfig", null, "MongoDB URI: {}", mongoUri);
+        LoggingUtils.info(logger, "logConfig", null, "Scoring Service Base URL: {}", scorerUrl);
     }
 }

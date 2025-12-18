@@ -39,7 +39,7 @@ public class SparkServiceImpl implements SparkService {
     private void checkExistingTitle(String operation, String title) throws SparkAlreadyExistsException {
         if (sparkRepository.existsByTitle(title)) {
             SparkAlreadyExistsException exception = new SparkAlreadyExistsException(title);
-            LoggingUtils.warn(logger, operation, "",
+            LoggingUtils.warn(logger, operation, null,
                     "Spark already exists", exception);
             throw exception;
         }
@@ -53,7 +53,7 @@ public class SparkServiceImpl implements SparkService {
     @Override
     public Spark createSpark(String title, String description) {
 
-        LoggingUtils.debug(logger, "createSpark", "",
+        LoggingUtils.debug(logger, "createSpark", null,
                 "Creating new Spark...");
 
         checkExistingTitle("createSpark", title);
@@ -283,7 +283,7 @@ public class SparkServiceImpl implements SparkService {
 
         boolean byTitle = isNotNullOrEmpty(title);
 
-        LoggingUtils.debug(logger, "searchSparks", "",
+        LoggingUtils.debug(logger, "searchSparks", null,
                 "Searching Sparks with criteria: [title='{}', parentScope={}, parentId={}, page={}, size={}]...",
                 title, parentScope, parentId, page, size);
 
@@ -303,7 +303,7 @@ public class SparkServiceImpl implements SparkService {
             };
         }
 
-        LoggingUtils.info(logger, "searchSparks", "",
+        LoggingUtils.info(logger, "searchSparks", null,
                 "Found {} Sparks matching criteria: [title='{}', parentScope={}, parentId={}, page={}, size={}].",
                 sparksPage.getTotalElements(), title, parentScope, parentId, page, size);
 

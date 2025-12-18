@@ -30,7 +30,7 @@ public class SparkScoreMapper {
                                             .toList()
                                             : new ArrayList<>();
                             String id = s.getId() != null ? s.getId().toHexString() : e.getKey().toHexString();
-                            return new SparkScoreRequestDTO(id, s.getParentId().toHexString(), reasonsDtoList, s.getCreatedAt());
+                            return new SparkScoreRequestDTO(id, s.getParentId() != null ? s.getParentId().toHexString() : null, reasonsDtoList, s.getCreatedAt());
                         }
                 ));
     }

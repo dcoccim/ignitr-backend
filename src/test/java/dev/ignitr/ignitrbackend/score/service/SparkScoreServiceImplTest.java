@@ -2,8 +2,8 @@ package dev.ignitr.ignitrbackend.score.service;
 
 import dev.ignitr.ignitrbackend.score.client.ScoringServiceClient;
 import dev.ignitr.ignitrbackend.score.exception.ScoringException;
-import dev.ignitr.ignitrbackend.score.tree.ScoredSparkTree;
 import dev.ignitr.ignitrbackend.spark.model.Spark;
+import dev.ignitr.ignitrbackend.spark.tree.SparkTree;
 import org.bson.types.ObjectId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -44,25 +44,25 @@ public class SparkScoreServiceImplTest {
         Map<ObjectId, Spark> sparkMap = new HashMap<>();
         sparkMap.put(rootId, spark);
 
-        ScoredSparkTree expected = new ScoredSparkTree(
+        SparkTree expected = new SparkTree(
                 rootId,
                 "Root",
                 "Desc",
                 null,
                 1,
                 0,
+                0,
                 new ArrayList<>(),
                 now,
-                now,
-                10
+                now
         );
 
-        when(scoringServiceClient.postSparkTreeScore(sparkMap, rootId)).thenReturn(expected);
+        when(scoringServiceClient.postSparkScoreTree(sparkMap, rootId)).thenReturn(expected);
 
-        ScoredSparkTree result = sparkScoreService.scoreTree(rootId, sparkMap);
+        SparkTree result = sparkScoreService.scoreTree(rootId, sparkMap);
 
         assertThat(result).isSameAs(expected);
-        verify(scoringServiceClient).postSparkTreeScore(sparkMap, rootId);
+        verify(scoringServiceClient).postSparkScoreTree(sparkMap, rootId);
     }
 
     @Test
@@ -71,13 +71,13 @@ public class SparkScoreServiceImplTest {
         ObjectId rootId = new ObjectId();
         Map<ObjectId, Spark> sparkMap = Map.of(rootId, new Spark());
 
-        when(scoringServiceClient.postSparkTreeScore(sparkMap, rootId))
+        when(scoringServiceClient.postSparkScoreTree(sparkMap, rootId))
                 .thenThrow(new ScoringException(rootId));
 
         assertThatThrownBy(() -> sparkScoreService.scoreTree(rootId, sparkMap))
                 .isInstanceOf(ScoringException.class)
                 .hasMessageContaining(rootId.toHexString());
 
-        verify(scoringServiceClient).postSparkTreeScore(sparkMap, rootId);
+        verify(scoringServiceClient).postSparkScoreTree(sparkMap, rootId);
     }
 }

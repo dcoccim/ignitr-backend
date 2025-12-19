@@ -13,10 +13,7 @@ import dev.ignitr.ignitrbackend.spark.tree.SparkTree;
 import org.bson.types.ObjectId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -44,6 +41,38 @@ public class SparkServiceImpl implements SparkService {
                     "Spark already exists", exception);
             throw exception;
         }
+    }
+
+    private Map<ObjectId, Spark> getSparkMap(List<Spark> rootSparks) {
+
+        Map<ObjectId, Spark> sparkMap = new HashMap<>();
+        for(Spark root : rootSparks) {
+            if (root != null) {
+                sparkMap.put(root.getId(), root);
+            }
+        }
+
+        List<ObjectId> currentLevel = rootSparks.stream().map(Spark::getId)
+                .toList();
+
+        while (!currentLevel.isEmpty()) {
+            List<Spark> children = sparkRepository.findByParentIdIn(currentLevel);
+
+            if (children.isEmpty()) break;
+
+            List<ObjectId> nextLevel = new ArrayList<>(children.size());
+
+            for (Spark child : children) {
+                if (child == null) continue;
+                if (sparkMap.putIfAbsent(child.getId(), child) == null) {
+                    nextLevel.add(child.getId());
+                }
+            }
+
+            currentLevel = nextLevel;
+        }
+
+        return sparkMap;
     }
 
     @Override
@@ -137,21 +166,7 @@ public class SparkServiceImpl implements SparkService {
 
         Spark root = getSparkById(rootId);
 
-        Map<ObjectId, Spark> sparkMap = new HashMap<>();
-        Deque<Spark> stack = new ArrayDeque<>();
-        stack.push(root);
-
-        while (!stack.isEmpty()) {
-            Spark current = stack.pop();
-            sparkMap.put(current.getId(), current);
-
-            List<Spark> children = sparkRepository.findByParentId(current.getId());
-            for (Spark child : children) {
-                if(child != null) {
-                    stack.push(child);
-                }
-            }
-        }
+        Map<ObjectId, Spark> sparkMap = getSparkMap(List.of(root));
 
         LoggingUtils.info(logger, "getSparkTree", root.getId(),
                 "Fetched Spark subtree with {} Sparks.", sparkMap.size());
@@ -162,6 +177,45 @@ public class SparkServiceImpl implements SparkService {
             LoggingUtils.warn(logger, "getSparkTree", root.getId(),
                     "Error scoring Spark tree, returning unscored tree.", e);
             return SparkMapper.toSparkTree(sparkMap, root.getId());
+        }
+    }
+
+    @Override
+    public Page<SparkTree> getSparkTrees(ObjectId parentId, int page, int size) {
+
+        LoggingUtils.debug(logger, "getSparkTrees", parentId,
+                "Fetching paged Spark trees...");
+
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "createdAt"));
+
+        Page<Spark> rootPage = (parentId != null)
+                ? sparkRepository.findByParentId(parentId, pageable)
+                : sparkRepository.findByParentIdIsNull(pageable);
+
+        List<Spark> rootList = rootPage.getContent();
+        if (rootList.isEmpty()) {
+            return new PageImpl<>(List.of(), pageable, rootPage.getTotalElements());
+        }
+
+        Map<ObjectId, Spark> sparkMap = getSparkMap(rootList);
+
+        List<ObjectId> rootIds = rootList.stream().map(Spark::getId).toList();
+
+        try {
+
+            List<SparkTree> scoredTrees = sparkScoreService.scoreTrees(rootIds, sparkMap);
+
+            return new PageImpl<>(scoredTrees, pageable, rootPage.getTotalElements());
+
+        } catch (ScoringException e) {
+            LoggingUtils.warn(logger, "getSparkTrees", parentId,
+                    "Error scoring Spark trees, returning unscored trees.", e);
+
+            List<SparkTree> sparkTrees = SparkMapper.toSparkTreeList(
+                    sparkMap, rootIds
+            );
+
+            return new PageImpl<>(sparkTrees, pageable, rootPage.getTotalElements());
         }
     }
 
@@ -276,9 +330,6 @@ public class SparkServiceImpl implements SparkService {
 
     @Override
     public Page<Spark> searchSparks(String title, ParentSearchScope parentScope, ObjectId parentId, int page, int size) {
-
-        page = Math.max(page, 0);
-        size = size <= 0 ? 20 : size;
 
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "createdAt"));
 

@@ -22,6 +22,9 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 import static dev.ignitr.ignitrbackend.common.utils.StringUtils.isInvalidObjectId;
+import static dev.ignitr.ignitrbackend.common.utils.StringUtils.isNotNullOrEmpty;
+import static java.lang.Math.clamp;
+import static java.lang.Math.max;
 
 
 @RestController
@@ -109,6 +112,39 @@ public class SparkController {
         return ResponseEntity.ok(response);
     }
 
+    @GetMapping(
+            path = "/trees",
+            produces = MediaType.APPLICATION_JSON_VALUE
+    )
+    public ResponseEntity<PagedResponse<SparkTreeDTO>> getSparkTrees(
+            @RequestParam(name = "parentId", required = false) String parentId,
+            @RequestParam(name = "page", defaultValue = "0") int page,
+            @RequestParam(name = "size", defaultValue = "20") int size
+    ) {
+        page = max(page, 0);
+        size = size <= 0 ? 20 : clamp(size, 1, 100);
+
+        ObjectId parentObjectId = null;
+        if(isNotNullOrEmpty(parentId)) {
+            if (isInvalidObjectId(parentId)) {
+                throw new IllegalArgumentException("Invalid parentId. Must be a valid ObjectId.");
+            }
+            parentObjectId = new ObjectId(parentId);
+        }
+
+        Page<SparkTree> sparkTreesPage = sparkService.getSparkTrees(parentObjectId, page, size);
+        Page<SparkTreeDTO> response = sparkTreesPage.map(SparkMapper::toSparkTreeDto);
+        PagedResponse<SparkTreeDTO> pagedResponse = new PagedResponse<>(
+                response.getContent(),
+                response.getNumber(),
+                response.getSize(),
+                response.getTotalElements(),
+                response.getTotalPages()
+        );
+
+        return ResponseEntity.ok(pagedResponse);
+    }
+
     @PutMapping(
             path = "/{id}",
             consumes = MediaType.APPLICATION_JSON_VALUE,
@@ -164,6 +200,8 @@ public class SparkController {
             @RequestParam(name = "page", defaultValue = "0") int page,
             @RequestParam(name = "size", defaultValue = "20") int size
     ) {
+        page = max(page, 0);
+        size = size <= 0 ? 20 : clamp(size, 1, 100);
         ParentSearchScope scope;
         ObjectId parentObjectId = null;
 

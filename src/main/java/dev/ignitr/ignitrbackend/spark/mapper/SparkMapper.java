@@ -2,7 +2,6 @@ package dev.ignitr.ignitrbackend.spark.mapper;
 
 import dev.ignitr.ignitrbackend.reason.mapper.ReasonMapper;
 import dev.ignitr.ignitrbackend.reason.model.ReasonType;
-import dev.ignitr.ignitrbackend.score.tree.ScoredSparkTree;
 import dev.ignitr.ignitrbackend.spark.dto.*;
 import dev.ignitr.ignitrbackend.spark.model.Spark;
 import dev.ignitr.ignitrbackend.spark.tree.SparkTree;
@@ -73,6 +72,17 @@ public class SparkMapper {
         );
     }
 
+    public static List<SparkTree> toSparkTreeList(Map<ObjectId, Spark> sparkMap, List<ObjectId> rootIds) {
+        List<SparkTree> sparkTrees = new ArrayList<>();
+        for (ObjectId rootId : rootIds) {
+            SparkTree sparkTree = toSparkTree(sparkMap, rootId);
+            if (sparkTree != null) {
+                sparkTrees.add(sparkTree);
+            }
+        }
+        return sparkTrees;
+    }
+
     public static SparkTree toSparkTree(Map<ObjectId, Spark> sparkMap, ObjectId rootId) {
         Spark rootSpark = sparkMap.get(rootId);
         if (rootSpark == null) {
@@ -89,7 +99,7 @@ public class SparkMapper {
             }
         }
 
-        SparkTree rootNode = SparkTree.fromSpark(rootSpark, goodReasonsCount, badReasonsCount, new ArrayList<>());
+        SparkTree rootNode = SparkTree.fromSpark(rootSpark, null, goodReasonsCount, badReasonsCount, new ArrayList<>());
 
         for (Spark spark : sparkMap.values()) {
             ObjectId parentId = spark.getParentId();
@@ -107,19 +117,13 @@ public class SparkMapper {
 
     public static SparkTreeDTO toSparkTreeDto(SparkTree sparkTree)  {
 
-        Integer score = null;
-
-        if(sparkTree instanceof ScoredSparkTree){
-            score = ((ScoredSparkTree) sparkTree).getScore();
-        }
-
         SparkTreeDTO dto = new SparkTreeDTO(
                 sparkTree.getId().toHexString(),
                 sparkTree.getTitle(),
                 sparkTree.getDescription(),
                 sparkTree.getGoodReasonsCount(),
                 sparkTree.getBadReasonsCount(),
-                score,
+                sparkTree.getScore(),
                 sparkTree.getCreatedAt(),
                 sparkTree.getUpdatedAt(),
                 new java.util.ArrayList<>()

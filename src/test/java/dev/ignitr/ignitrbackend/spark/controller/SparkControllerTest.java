@@ -296,10 +296,10 @@ class SparkControllerTest {
                 now
         );
 
-        SparkTree childOfChildTree1 = SparkTree.fromSpark(childOfChild1, 0, 0, new ArrayList<>());
-        SparkTree childTree1 = SparkTree.fromSpark(child1, 0, 0, List.of(childOfChildTree1));
-        SparkTree childTree2 = SparkTree.fromSpark(child2, 0, 0, new ArrayList<>());
-        SparkTree tree = SparkTree.fromSpark(root, 0, 0, List.of(childTree1, childTree2));
+        SparkTree childOfChildTree1 = SparkTree.fromSpark(childOfChild1, null, 0, 0, new ArrayList<>());
+        SparkTree childTree1 = SparkTree.fromSpark(child1, null, 0, 0, List.of(childOfChildTree1));
+        SparkTree childTree2 = SparkTree.fromSpark(child2, null, 0,0,  new ArrayList<>());
+        SparkTree tree = SparkTree.fromSpark(root, null, 0, 0, List.of(childTree1, childTree2));
 
         when(sparkService.getSparkTree(rootId)).thenReturn(tree);
 

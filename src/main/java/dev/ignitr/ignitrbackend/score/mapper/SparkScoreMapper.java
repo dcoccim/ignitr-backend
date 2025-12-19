@@ -3,8 +3,8 @@ package dev.ignitr.ignitrbackend.score.mapper;
 import dev.ignitr.ignitrbackend.reason.model.ReasonType;
 import dev.ignitr.ignitrbackend.score.dto.SparkScoreRequestDTO;
 import dev.ignitr.ignitrbackend.score.dto.SparkTreeScoreResponseDTO;
-import dev.ignitr.ignitrbackend.score.tree.ScoredSparkTree;
 import dev.ignitr.ignitrbackend.spark.model.Spark;
+import dev.ignitr.ignitrbackend.spark.tree.SparkTree;
 import org.bson.types.ObjectId;
 
 import java.util.ArrayList;
@@ -35,11 +35,17 @@ public class SparkScoreMapper {
                 ));
     }
 
-    public static ScoredSparkTree toScoredSparkTree(Map<ObjectId, Spark> sparkMap, SparkTreeScoreResponseDTO dto) {
+    public static SparkTree toScoredSparkTree(Map<ObjectId, Spark> sparkMap, SparkTreeScoreResponseDTO dto) {
         return mapNode(sparkMap, dto);
     }
 
-    private static ScoredSparkTree mapNode(Map<ObjectId, Spark> sparkMap, SparkTreeScoreResponseDTO dto) {
+    public static List<SparkTree> toScoredSparkTrees(Map<ObjectId, Spark> sparkMap, List<SparkTreeScoreResponseDTO> dtoList) {
+        return dtoList.stream()
+                .map(dto -> mapNode(sparkMap, dto))
+                .toList();
+    }
+
+    private static SparkTree mapNode(Map<ObjectId, Spark> sparkMap, SparkTreeScoreResponseDTO dto) {
 
         Spark spark = sparkMap.get(new ObjectId(dto.id()));
 
@@ -58,16 +64,16 @@ public class SparkScoreMapper {
             }
         }
 
-        ScoredSparkTree node = ScoredSparkTree.fromSpark(
+        SparkTree node = SparkTree.fromSpark(
                 spark,
                 goodReasonsCount,
                 badReasonsCount,
-                new ArrayList<>(),
-                dto.score()
+                dto.score(),
+                new ArrayList<>()
         );
 
         if (dto.children() != null && !dto.children().isEmpty()) {
-            List<ScoredSparkTree> children = dto.children().stream()
+            List<SparkTree> children = dto.children().stream()
                     .map(childDto -> mapNode(sparkMap, childDto))
                     .toList();
             node.getChildren().addAll(children);

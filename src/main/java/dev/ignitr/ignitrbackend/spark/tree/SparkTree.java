@@ -15,19 +15,21 @@ public class SparkTree {
     private String title;
     private String description;
     private ObjectId parentId;
+    private Integer score;
     private int goodReasonsCount;
     private int badReasonsCount;
     private List<SparkTree> children;
     private Instant createdAt;
     private Instant updatedAt;
 
-    public SparkTree(ObjectId id, String title, String description, ObjectId parentId,
+    public SparkTree(ObjectId id, String title, String description, ObjectId parentId, Integer score,
                      int goodReasonsCount, int badReasonsCount, List<SparkTree> children,
                      Instant createdAt, Instant updatedAt) {
         this.id = id;
         this.title = title;
         this.description = description;
         this.parentId = parentId;
+        this.score = score;
         this.goodReasonsCount = goodReasonsCount;
         this.badReasonsCount = badReasonsCount;
         this.children = children;
@@ -35,12 +37,13 @@ public class SparkTree {
         this.updatedAt = updatedAt;
     }
 
-    public static SparkTree fromSpark(Spark spark, int goodReasonsCount, int badReasonsCount, List<SparkTree> children) {
+    public static SparkTree fromSpark(Spark spark, Integer score, int goodReasonsCount, int badReasonsCount, List<SparkTree> children) {
         return new SparkTree(
                 spark.getId(),
                 spark.getTitle(),
                 spark.getDescription(),
                 spark.getParentId(),
+                score,
                 goodReasonsCount,
                 badReasonsCount,
                 children,

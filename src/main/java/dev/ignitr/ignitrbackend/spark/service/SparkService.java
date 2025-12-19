@@ -22,6 +22,8 @@ public interface SparkService {
 
     SparkTree getSparkTree(ObjectId rootId);
 
+    Page<SparkTree> getSparkTrees(ObjectId parentId, int page, int size);
+
     Spark updateSpark(ObjectId id, String title, String description);
 
     Spark partialUpdateSpark(ObjectId id, String title, String description);

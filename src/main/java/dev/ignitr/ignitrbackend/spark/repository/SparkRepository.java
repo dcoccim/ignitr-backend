@@ -14,6 +14,8 @@ public interface SparkRepository extends MongoRepository<Spark, ObjectId> {
 
     List<Spark> findByParentId(ObjectId parentId);
 
+    List<Spark> findByParentIdIn(List<ObjectId> parentIds);
+
     Page<Spark> findByParentId(ObjectId parentId, Pageable pageable);
 
     Page<Spark> findByParentIdIsNull(Pageable pageable);

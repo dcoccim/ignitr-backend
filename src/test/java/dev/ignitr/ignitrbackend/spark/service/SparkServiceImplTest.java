@@ -276,9 +276,8 @@ class SparkServiceImplTest {
         Spark child2 = new Spark(child2Id, "Child 2", "Child 2 desc", rootId, List.of(), now, now);
 
         when(sparkRepository.findById(rootId)).thenReturn(Optional.of(root));
-        when(sparkRepository.findByParentId(rootId)).thenReturn(List.of(child1, child2));
-        when(sparkRepository.findByParentId(child1Id)).thenReturn(List.of());
-        when(sparkRepository.findByParentId(child2Id)).thenReturn(List.of());
+        when(sparkRepository.findByParentIdIn(List.of(rootId))).thenReturn(List.of(child1, child2));
+        when(sparkRepository.findByParentIdIn(List.of(child1Id, child2Id))).thenReturn(List.of());
         when(sparkScoreService.scoreTree(any(ObjectId.class), anyMap())).thenThrow(new ScoringException(rootId));
 
         SparkTree result = sparkService.getSparkTree(rootId);
@@ -300,7 +299,7 @@ class SparkServiceImplTest {
         Spark root = new Spark(rootId, "Leaf", "Leaf desc", null, List.of(), now, now);
 
         when(sparkRepository.findById(rootId)).thenReturn(Optional.of(root));
-        when(sparkRepository.findByParentId(rootId)).thenReturn(List.of());
+        when(sparkRepository.findByParentIdIn(List.of(rootId))).thenReturn(List.of());
         when(sparkScoreService.scoreTree(any(ObjectId.class), anyMap())).thenThrow(new ScoringException(rootId));
 
         SparkTree result = sparkService.getSparkTree(rootId);
@@ -309,7 +308,7 @@ class SparkServiceImplTest {
         assertThat(result.getId()).isEqualTo(rootId);
 
         verify(sparkRepository).findById(rootId);
-        verify(sparkRepository).findByParentId(rootId);
+        verify(sparkRepository).findByParentIdIn(List.of(rootId));
     }
 
     @Test

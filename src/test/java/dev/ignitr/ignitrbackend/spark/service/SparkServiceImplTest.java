@@ -14,10 +14,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.*;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -312,7 +309,7 @@ class SparkServiceImplTest {
     }
 
     @Test
-    void getSparkTreeList_throws_whenRootNotFound() {
+    void getSparkTree_throws_whenRootNotFound() {
 
         ObjectId missingRootId = new ObjectId("000000000000000000000777");
 
@@ -323,6 +320,110 @@ class SparkServiceImplTest {
                 .hasMessageContaining(missingRootId.toHexString());
 
         verify(sparkRepository).findById(missingRootId);
+        verify(sparkRepository, never()).findByParentId(any(ObjectId.class));
+    }
+
+    @Test
+    void getSparkTrees_returnsTreePage_whenRootIdIsNull() {
+
+        int page = 0;
+        int size = 10;
+
+        ObjectId spark1Id = new ObjectId();
+        ObjectId spark2Id = new ObjectId();
+        ObjectId childOfSpark1Id = new ObjectId();
+        Instant now = Instant.now();
+
+        Spark spark1 = new Spark(spark1Id, "Root Spark 1", "Root Spark 1 desc", null, List.of(), now, now);
+        Spark spark2 = new Spark(spark2Id, "Root Spark 2", "Root Spark 2 desc", null, List.of(), now, now);
+        Spark childOfSpark1 = new Spark(childOfSpark1Id, "Child of Spark 1", "Desc", spark1Id, List.of(), now, now);
+
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "createdAt"));
+        Page<Spark> rootsPage = new PageImpl<>(List.of(spark1, spark2), pageable, 2);
+
+        when(sparkRepository.findByParentIdIsNull(pageable)).thenReturn(rootsPage);
+        when(sparkRepository.findByParentIdIn(List.of(spark1Id, spark2Id))).thenReturn(List.of(childOfSpark1));
+        when(sparkRepository.findByParentIdIn(List.of(childOfSpark1Id))).thenReturn(List.of());
+        when(sparkScoreService.scoreTrees(anyList(), anyMap())).thenThrow(new ScoringException(List.of(spark1Id, spark2Id)));
+
+        Page<SparkTree> result = sparkService.getSparkTrees(null, page, size);
+
+        assertThat(result.getContent()).hasSize(2);
+        assertThat(result.getContent())
+                .extracting(SparkTree::getId)
+                .containsExactlyInAnyOrder(spark1Id, spark2Id);
+
+        SparkTree spark1Tree = result.getContent().stream()
+                .filter(st -> st.getId().equals(spark1Id))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("child1 tree not found in result"));
+
+        assertThat(spark1Tree.getChildren())
+                .hasSize(1)
+                .extracting(SparkTree::getId)
+                .containsExactly(childOfSpark1Id);
+
+        verify(sparkRepository, never()).findByParentId(any(ObjectId.class), any(Pageable.class));
+    }
+    @Test
+    void getSparkTrees_returnsTreePage_whenRootExists() {
+
+        int page = 0;
+        int size = 10;
+        ObjectId rootId = new ObjectId();
+        ObjectId child1Id = new ObjectId();
+        ObjectId child2Id = new ObjectId();
+        ObjectId childOfChild1Id = new ObjectId();
+        Instant now = Instant.now();
+
+        Spark child1 = new Spark(child1Id, "Child 1", "Child 1 desc", rootId, List.of(), now, now);
+        Spark child2 = new Spark(child2Id, "Child 2", "Child 2 desc", rootId, List.of(), now, now);
+        Spark childOfChild1 = new Spark(childOfChild1Id, "Child of Child 1", "Desc", child1Id, List.of(), now, now);
+
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "createdAt"));
+        Page<Spark> rootChildrenPage = new PageImpl<>(List.of(child1, child2), pageable, 2);
+
+        when(sparkRepository.findByParentId(rootId, pageable)).thenReturn(rootChildrenPage);
+        when(sparkRepository.findByParentIdIn(List.of(child1Id, child2Id))).thenReturn(List.of(childOfChild1));
+        when(sparkRepository.findByParentIdIn(List.of(childOfChild1Id))).thenReturn(List.of());
+        when(sparkScoreService.scoreTrees(anyList(), anyMap())).thenThrow(new ScoringException(rootId));
+
+        Page<SparkTree> result = sparkService.getSparkTrees(rootId, page, size);
+
+        assertThat(result.getContent()).hasSize(2);
+        assertThat(result.getContent())
+                .extracting(SparkTree::getId)
+                .containsExactlyInAnyOrder(child1Id, child2Id);
+
+        SparkTree child1Tree = result.getContent().stream()
+                .filter(st -> st.getId().equals(child1Id))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("child1 tree not found in result"));
+
+        assertThat(child1Tree.getChildren())
+                .hasSize(1)
+                .extracting(SparkTree::getId)
+                .containsExactly(childOfChild1Id);
+    }
+
+    @Test
+    void getSparkTrees_returnsEmptyPage_whenRootNotFound() {
+
+        ObjectId missingRootId = new ObjectId("000000000000000000000888");
+        int page = 0;
+        int size = 10;
+
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "createdAt"));
+
+        Page<Spark> emptyPage = Page.empty(pageable);
+        when(sparkRepository.findByParentId(eq(missingRootId), eq(pageable))).thenReturn(emptyPage);
+
+        Page<SparkTree> response = sparkService.getSparkTrees(missingRootId, page, size);
+
+        assertThat(response.getContent()).isEmpty();
+        assertThat(response.getSize()).isEqualTo(size);
+        assertThat(response.getTotalElements()).isEqualTo(0);
+
         verify(sparkRepository, never()).findByParentId(any(ObjectId.class));
     }
 

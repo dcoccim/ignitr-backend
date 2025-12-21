@@ -192,6 +192,10 @@ public class SparkServiceImpl implements SparkService {
                 ? sparkRepository.findByParentId(parentId, pageable)
                 : sparkRepository.findByParentIdIsNull(pageable);
 
+        if(rootPage == null) {
+            return new PageImpl<>(List.of(), pageable, 0);
+        }
+
         List<Spark> rootList = rootPage.getContent();
         if (rootList.isEmpty()) {
             return new PageImpl<>(List.of(), pageable, rootPage.getTotalElements());

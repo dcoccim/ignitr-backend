@@ -325,6 +325,99 @@ class SparkControllerTest {
     }
 
     @Test
+    void getSparkTrees_returns200AndRoots_onSuccess() throws Exception {
+
+        int page = 0;
+        int size = 3;
+        ObjectId root1Id = new ObjectId();
+        ObjectId root2Id = new ObjectId();
+        ObjectId root3Id = new ObjectId();
+        ObjectId childOfRoot1Id = new ObjectId();
+        String root1Title = "Root 1";
+        String root2Title = "Root 2";
+        String root3Title = "Root 3";
+        String childOfRoot1Title = "Child 1 of root 1";
+        Instant now = Instant.now();
+
+        Spark childOfRoot1 = new Spark(
+                childOfRoot1Id,
+                childOfRoot1Title,
+                "Desc Child of root 1",
+                root1Id,
+                List.of(),
+                now,
+                now
+        );
+
+        Spark root1 = new Spark(
+                root1Id,
+                root1Title,
+                "Desc root 1",
+                null,
+                List.of(),
+                now,
+                now
+        );
+
+        Spark root2 = new Spark(
+                root2Id,
+                root2Title,
+                "Desc root 2",
+                null,
+                List.of(),
+                now,
+                now
+        );
+
+        Spark root3 = new Spark(
+                root3Id,
+                root3Title,
+                "Desc root 3",
+                null,
+                List.of(),
+                now,
+                now
+        );
+
+        SparkTree childOfRoot1Tree = SparkTree.fromSpark(childOfRoot1, null, 0, 0, new ArrayList<>());
+        SparkTree tree1 = SparkTree.fromSpark(root1, null, 0, 0, List.of(childOfRoot1Tree));
+        SparkTree tree2 = SparkTree.fromSpark(root2, null, 0, 0, new ArrayList<>());
+        SparkTree tree3 = SparkTree.fromSpark(root3, null, 0,0,  new ArrayList<>());
+
+        when(sparkService.getSparkTrees(null, page, size)).thenReturn(
+                new PageImpl<>(
+                        List.of(tree1, tree2, tree3),
+                        PageRequest.of(page, size),
+                        3
+                )
+        );
+
+        mockMvc.perform(get("/sparks/trees")
+                        .param("page", String.valueOf(page))
+                        .param("size", String.valueOf(size))
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+
+                .andExpect(jsonPath("$.content[0].id", is(root1Id.toHexString())))
+                .andExpect(jsonPath("$.content[0].title", is(root1Title)))
+                .andExpect(jsonPath("$.content[0].children").isArray())
+                .andExpect(jsonPath("$.content[0].children[0].id", is(childOfRoot1Id.toHexString())))
+
+
+                .andExpect(jsonPath("$.content[1].id", is(root2Id.toHexString())))
+                .andExpect(jsonPath("$.content[1].title", is(root2Title)))
+                .andExpect(jsonPath("$.content[1].children").isArray())
+                .andExpect(jsonPath("$.content[1].children").isEmpty())
+
+                .andExpect(jsonPath("$.content[2].id", is(root3Id.toHexString())))
+                .andExpect(jsonPath("$.content[2].title", is(root3Title)))
+                .andExpect(jsonPath("$.content[2].children").isArray())
+                .andExpect(jsonPath("$.content[2].children").isEmpty());
+
+    }
+
+    @Test
     void getSparkTree_returns404AndApiError_whenRootNotFound() throws Exception {
 
         ObjectId missingId = new ObjectId("000000000000000000000001");
@@ -337,6 +430,38 @@ class SparkControllerTest {
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.code", is("SPARK_NOT_FOUND")))
                 .andExpect(jsonPath("$.status", is(404)));
+    }
+
+    @Test
+    void getSparkTrees_returns200AndPassesQueryParams_toService() throws Exception {
+
+        ObjectId rootId = new ObjectId();
+        when(sparkService.getSparkTrees(any(ObjectId.class), any(Integer.class), any(Integer.class)))
+                .thenReturn(Page.empty());
+
+        mockMvc.perform(get("/sparks/trees")
+                        .param("title", "test")
+                        .param("parentId", rootId.toHexString())
+                        .param("page", "1")
+                        .param("size", "10")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk());
+
+        verify(sparkService).getSparkTrees(rootId, 1, 10);
+    }
+
+    @Test
+    void getSparkTrees_throws_whenInvalidParentId() throws Exception {
+
+        mockMvc.perform(get("/sparks/trees")
+                        .param("title", "test")
+                        .param("parentId", "invalid-object-id")
+                        .param("page", "1")
+                        .param("size", "10")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest());
+
+        verify(sparkService, never()).getSparkTrees(any(ObjectId.class), any(Integer.class), any(Integer.class));
     }
 
     @Test
@@ -595,4 +720,5 @@ class SparkControllerTest {
 
         verify(sparkService).searchSparks("test", ParentSearchScope.ROOT, null, 1, 10);
     }
+
 }

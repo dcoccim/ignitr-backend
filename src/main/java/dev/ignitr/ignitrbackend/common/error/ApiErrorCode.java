@@ -11,6 +11,7 @@ public enum ApiErrorCode {
     REASON_ALREADY_EXISTS(HttpStatus.CONFLICT, "REASON_ALREADY_EXISTS", "A reason with this content already exists."),
     REASON_NOT_FOUND(HttpStatus.NOT_FOUND, "REASON_NOT_FOUND", "Reason not found"),
     DUPLICATE_KEY(HttpStatus.CONFLICT, "DUPLICATE_KEY", "A resource with the same unique field already exists."),
+    ILLEGAL_ARGUMENT(HttpStatus.BAD_REQUEST, "ILLEGAL_ARGUMENT", "An illegal argument was provided."),
     VALIDATION_ERROR(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", "Request validation failed."),
     INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL_ERROR", "An unexpected error occurred.");
 

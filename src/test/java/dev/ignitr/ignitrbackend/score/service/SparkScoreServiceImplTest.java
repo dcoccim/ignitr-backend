@@ -44,18 +44,7 @@ public class SparkScoreServiceImplTest {
         Map<ObjectId, Spark> sparkMap = new HashMap<>();
         sparkMap.put(rootId, spark);
 
-        SparkTree expected = new SparkTree(
-                rootId,
-                "Root",
-                "Desc",
-                null,
-                1,
-                0,
-                0,
-                new ArrayList<>(),
-                now,
-                now
-        );
+        SparkTree expected = SparkTree.fromSpark(spark, 1, 2, 1, new ArrayList<>());
 
         when(scoringServiceClient.postSparkScoreTree(sparkMap, rootId)).thenReturn(expected);
 
@@ -79,5 +68,53 @@ public class SparkScoreServiceImplTest {
                 .hasMessageContaining(rootId.toHexString());
 
         verify(scoringServiceClient).postSparkScoreTree(sparkMap, rootId);
+    }
+
+    @Test
+    void scoreTrees_returnsScoredTrees_whenClientSucceeds() {
+
+        ObjectId sparkId1 = new ObjectId();
+        ObjectId sparkId2 = new ObjectId();
+        Instant now = Instant.now();
+        Spark spark1 = new Spark(sparkId1, "Spark 1", "Desc 1", null, List.of(), Instant.now(), now);
+        Spark spark2 = new Spark(sparkId2, "Spark 2", "Desc 2", null, List.of(), Instant.now(), now);
+
+        SparkTree sparkTree1 = SparkTree.fromSpark(spark1, 1, 1, 0, new ArrayList<>());
+        SparkTree sparkTree2 = SparkTree.fromSpark(spark2, 1, 2, 1, new ArrayList<>());
+
+        List<SparkTree> expected = List.of(sparkTree1, sparkTree2);
+
+        Map <ObjectId, Spark> sparkMap = new HashMap<>();
+        List<ObjectId> rootIds = List.of(sparkId1, sparkId2);
+        sparkMap.put(sparkId1, spark1);
+        sparkMap.put(sparkId2, spark2);
+        when(scoringServiceClient.postSparkScoreTrees(sparkMap, rootIds)).thenReturn(expected);
+
+        List<SparkTree> result = sparkScoreService.scoreTrees(rootIds, sparkMap);
+
+        assertThat(result).isSameAs(expected);
+        verify(scoringServiceClient).postSparkScoreTrees(sparkMap, rootIds);
+    }
+
+    @Test
+    void scoreTrees_propagatesException_whenClientFails() {
+
+        ObjectId root1Id = new ObjectId();
+        ObjectId root2Id = new ObjectId();
+
+        Map<ObjectId, Spark> sparkMap = new HashMap<>();
+        sparkMap.put(root1Id, new Spark());
+        sparkMap.put(root2Id, new Spark());
+        List<ObjectId> rootIds = List.of(root1Id, root2Id);
+
+        when(scoringServiceClient.postSparkScoreTrees(sparkMap, rootIds))
+                .thenThrow(new ScoringException(rootIds));
+
+        assertThatThrownBy(() -> sparkScoreService.scoreTrees(rootIds, sparkMap))
+                .isInstanceOf(ScoringException.class)
+                .hasMessageContaining(root1Id.toHexString())
+                .hasMessageContaining(root2Id.toHexString());
+
+        verify(scoringServiceClient).postSparkScoreTrees(sparkMap, rootIds);
     }
 }

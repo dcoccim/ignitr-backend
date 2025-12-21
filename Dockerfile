@@ -5,9 +5,17 @@ COPY mvnw pom.xml ./
 COPY .mvn .mvn
 RUN chmod +x mvnw
 
+RUN ./mvnw -q -DskipTests dependency:go-offline
+
 COPY src src
 
-RUN ./mvnw -q -DskipTests clean package
+ARG RUN_TESTS=false
+
+RUN if [ "$RUN_TESTS" = "true" ]; then \
+      ./mvnw -q clean verify; \
+    else \
+      ./mvnw -q -DskipTests clean package; \
+    fi
 
 FROM eclipse-temurin:21-jre
 WORKDIR /app

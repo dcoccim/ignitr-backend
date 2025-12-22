@@ -108,7 +108,7 @@ public class SparkController {
             throw new IllegalArgumentException("Invalid spark ID format.");
         }
         SparkTree sparkTree = sparkService.getSparkTree(new ObjectId(id));
-        SparkTreeDTO response = SparkMapper.toSparkTreeDto(sparkTree);
+        SparkTreeDTO response = SparkMapper.toSparkTreeDto(sparkTree, Integer.MAX_VALUE, Integer.MAX_VALUE);
         return ResponseEntity.ok(response);
     }
 
@@ -119,7 +119,9 @@ public class SparkController {
     public ResponseEntity<PagedResponse<SparkTreeDTO>> getSparkTrees(
             @RequestParam(name = "parentId", required = false) String parentId,
             @RequestParam(name = "page", defaultValue = "0") int page,
-            @RequestParam(name = "size", defaultValue = "20") int size
+            @RequestParam(name = "size", defaultValue = "20") int size,
+            @RequestParam(name = "maxChildrenPerNode", defaultValue = "10") int maxChildren,
+            @RequestParam(name = "maxDepth", defaultValue = "5") int maxDepth
     ) {
         page = max(page, 0);
         size = size <= 0 ? 20 : clamp(size, 1, 100);
@@ -133,13 +135,13 @@ public class SparkController {
         }
 
         Page<SparkTree> sparkTreesPage = sparkService.getSparkTrees(parentObjectId, page, size);
-        Page<SparkTreeDTO> response = sparkTreesPage.map(SparkMapper::toSparkTreeDto);
+        List<SparkTreeDTO> sparkTreeDtoList = SparkMapper.toSparkTreeDtoList(sparkTreesPage.getContent(), maxDepth, maxChildren);
         PagedResponse<SparkTreeDTO> pagedResponse = new PagedResponse<>(
-                response.getContent(),
-                response.getNumber(),
-                response.getSize(),
-                response.getTotalElements(),
-                response.getTotalPages()
+                sparkTreeDtoList,
+                sparkTreesPage.getNumber(),
+                sparkTreesPage.getSize(),
+                sparkTreesPage.getTotalElements(),
+                sparkTreesPage.getTotalPages()
         );
 
         return ResponseEntity.ok(pagedResponse);

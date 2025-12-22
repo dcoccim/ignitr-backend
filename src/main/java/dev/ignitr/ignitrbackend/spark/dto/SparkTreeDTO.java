@@ -10,7 +10,9 @@ public record SparkTreeDTO(
         int goodReasonsCount,
         int badReasonsCount,
         Integer score,
+        int depthBelow,
         Instant createdAt,
         Instant updatedAt,
+        int childrenCount,
         List<SparkTreeDTO> children
 ) {}

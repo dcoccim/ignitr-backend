@@ -12,6 +12,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import static dev.ignitr.ignitrbackend.spark.tree.SparkTreeUtils.computeSubtreeDepth;
+
 public class SparkMapper {
 
     private SparkMapper() {}
@@ -114,23 +116,49 @@ public class SparkMapper {
         return rootNode;
     }
 
+    public static SparkTreeDTO toSparkTreeDto(SparkTree root, int requestMaxDepth, int maxChildrenPerNode) {
+        Map<ObjectId, Integer> subtreeDepth = computeSubtreeDepth(root);
+        return toSparkTreeDto(root, requestMaxDepth, maxChildrenPerNode, subtreeDepth);
+    }
 
-    public static SparkTreeDTO toSparkTreeDto(SparkTree sparkTree)  {
+    public static List<SparkTreeDTO> toSparkTreeDtoList(List<SparkTree> sparkTrees, int requestMaxDepth, int maxChildrenPerNode) {
+        Map<ObjectId, Integer> subtreeDepth = computeSubtreeDepth(sparkTrees);
+        return sparkTrees.stream().map(
+                node -> toSparkTreeDto(node, requestMaxDepth, maxChildrenPerNode, subtreeDepth)
+        ).toList();
+    }
+
+    private static SparkTreeDTO toSparkTreeDto(
+            SparkTree node,
+            int requestMaxDepth,
+            int maxChildrenPerNode,
+            Map<ObjectId, Integer> subtreeDepth
+    ) {
+        List<SparkTree> children = node.getChildren() != null ? node.getChildren() : List.of();
+
+        int depthBelow = subtreeDepth.getOrDefault(node.getId(), 0);
 
         SparkTreeDTO dto = new SparkTreeDTO(
-                sparkTree.getId().toHexString(),
-                sparkTree.getTitle(),
-                sparkTree.getDescription(),
-                sparkTree.getGoodReasonsCount(),
-                sparkTree.getBadReasonsCount(),
-                sparkTree.getScore(),
-                sparkTree.getCreatedAt(),
-                sparkTree.getUpdatedAt(),
-                new java.util.ArrayList<>()
+                node.getId().toHexString(),
+                node.getTitle(),
+                node.getDescription(),
+                node.getGoodReasonsCount(),
+                node.getBadReasonsCount(),
+                node.getScore(),
+                depthBelow,
+                node.getCreatedAt(),
+                node.getUpdatedAt(),
+                children.size(),
+                new ArrayList<>()
         );
 
-        for (SparkTree child : sparkTree.getChildren()) {
-            dto.children().add(toSparkTreeDto(child));
+        if (requestMaxDepth <= 0 || maxChildrenPerNode <= 0 || children.isEmpty()) {
+            return dto;
+        }
+
+        int limit = Math.min(maxChildrenPerNode, children.size());
+        for (int i = 0; i < limit; i++) {
+            dto.children().add(toSparkTreeDto(children.get(i), requestMaxDepth - 1, maxChildrenPerNode, subtreeDepth));
         }
 
         return dto;

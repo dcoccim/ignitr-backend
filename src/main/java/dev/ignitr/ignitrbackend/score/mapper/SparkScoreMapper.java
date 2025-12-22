@@ -66,9 +66,9 @@ public class SparkScoreMapper {
 
         SparkTree node = SparkTree.fromSpark(
                 spark,
+                dto.score(),
                 goodReasonsCount,
                 badReasonsCount,
-                dto.score(),
                 new ArrayList<>()
         );
 

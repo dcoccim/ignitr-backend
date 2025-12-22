@@ -21,6 +21,7 @@
     <properties>
         <java.version>21</java.version>
         <mockito.version>5.20.0</mockito.version>
+        <bytebuddy.version>1.17.8</bytebuddy.version>
         <argLine/>
     </properties>
 
@@ -39,6 +40,19 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+            <version>3.0.0</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>1.18.34</version>
+            <scope>provided</scope>
         </dependency>
 
         <dependency>
@@ -61,16 +75,10 @@
         </dependency>
 
         <dependency>
-            <groupId>org.projectlombok</groupId>
-            <artifactId>lombok</artifactId>
-            <version>1.18.34</version>
-            <scope>provided</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.springdoc</groupId>
-            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
-            <version>3.0.0</version>
+            <groupId>net.bytebuddy</groupId>
+            <artifactId>byte-buddy-agent</artifactId>
+            <version>${bytebuddy.version}</version>
+            <scope>test</scope>
         </dependency>
 
     </dependencies>
@@ -95,15 +103,25 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <mainClass>dev.ignitr.ignitrbackend.IgnitrBackendApplication</mainClass>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>repackage</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
 
-           <plugin>
+            <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-dependency-plugin</artifactId>
                 <version>3.7.1</version>
                 <executions>
                     <execution>
-                        <id>copy-mockito-agent</id>
+                        <id>copy-byte-buddy-agent</id>
                         <phase>process-test-classes</phase>
                         <goals>
                             <goal>copy</goal>
@@ -111,11 +129,11 @@
                         <configuration>
                             <artifactItems>
                                 <artifactItem>
-                                    <groupId>org.mockito</groupId>
-                                    <artifactId>mockito-core</artifactId>
-                                    <version>${mockito.version}</version>
+                                    <groupId>net.bytebuddy</groupId>
+                                    <artifactId>byte-buddy-agent</artifactId>
+                                    <version>${bytebuddy.version}</version>
                                     <outputDirectory>${project.build.directory}</outputDirectory>
-                                    <destFileName>mockito-agent.jar</destFileName>
+                                    <destFileName>byte-buddy-agent.jar</destFileName>
                                 </artifactItem>
                             </artifactItems>
                         </configuration>
@@ -128,7 +146,7 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.5.3</version>
                 <configuration>
-                    <argLine>${argLine} -javaagent:${project.build.directory}/mockito-agent.jar</argLine>
+                    <argLine>${argLine} -javaagent:${project.build.directory}/byte-buddy-agent.jar</argLine>
                 </configuration>
             </plugin>
 
@@ -137,7 +155,7 @@
                 <artifactId>maven-failsafe-plugin</artifactId>
                 <version>3.5.3</version>
                 <configuration>
-                    <argLine>${argLine} -javaagent:${project.build.directory}/mockito-agent.jar</argLine>
+                    <argLine>${argLine} -javaagent:${project.build.directory}/byte-buddy-agent.jar</argLine>
                 </configuration>
             </plugin>
 

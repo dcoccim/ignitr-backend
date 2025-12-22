@@ -20,7 +20,7 @@ RUN if [ "$RUN_TESTS" = "true" ]; then \
 FROM eclipse-temurin:21-jre
 WORKDIR /app
 
-COPY --from=build /app/target/*.jar app.jar
+COPY --from=build /app/target/*.jar /app/app.jar
 
 ARG SERVER_PORT=8080
 ENV SERVER_PORT=${SERVER_PORT}

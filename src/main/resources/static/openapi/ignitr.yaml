@@ -725,14 +725,26 @@ components:
           type: string
         description:
           type: string
+        goodReasonsCount:
+          type: integer
+          description: Number of GOOD reasons attached to this spark.
+        badReasonsCount:
+          type: integer
+          description: Number of BAD reasons attached to this spark.
         score:
             type: integer
+        depthBelow:
+          type: integer
+          description: Remaining depth reachable below this node (0 when leaf).
         createdAt:
           type: string
           format: date-time
         updatedAt:
           type: string
           format: date-time
+        childrenCount:
+          type: integer
+          description: Total number of direct child sparks (regardless of truncation in children array).
         children:
           type: array
           items:
